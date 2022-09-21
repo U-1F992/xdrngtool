@@ -2,7 +2,7 @@ from datetime import timedelta
 from typing import List, Optional, Tuple, TypeAlias
 
 from xddb import PlayerTeam, EnemyTeam, generate_quick_battle
-from lcg import LCG
+from .lcg import LCG
 
 TeamPair: TypeAlias = Tuple[Tuple[PlayerTeam, int, int], Tuple[EnemyTeam, int, int]]
 
@@ -40,7 +40,8 @@ def get_wait_time(
     Returns:
         timedelta: 待機時間
     """
-    sec = LCG(target_seed).index_from(current_seed) / ADVANCES_PER_SECOND_BY_MOLTRES
+    index = LCG(target_seed).index_from(current_seed)
+    sec = index / ADVANCES_PER_SECOND_BY_MOLTRES
     return timedelta(seconds=sec) - LEFTOVER
 
 def is_short_enough(wait_time: timedelta) -> bool:
