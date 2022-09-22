@@ -1,6 +1,5 @@
 from datetime import timedelta
 import unittest
-from unittest.mock import DEFAULT
 from xdhelper import *
 
 class TestHelper(unittest.TestCase):
@@ -31,6 +30,8 @@ class TestHelper(unittest.TestCase):
         test_case = [
             (0x88144b1c, 0xd3dfba89, (1, 0)),
             (0x88144b1c, 0x143956ec, (0, 2)),
+            (0x814fe9dd, 0xb11b9415, (10, 10)),
+            (0x410df1e7, 0xbfb6e0c8, (5, 0)),
         ]
         for current_seed, target_seed, expected in test_case:
             with self.subTest(current_seed=current_seed, target_seed=target_seed, expected=expected):

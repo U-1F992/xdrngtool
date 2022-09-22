@@ -1,4 +1,3 @@
-from asyncore import write
 from datetime import timedelta
 import math
 from typing import Optional, TypeAlias
@@ -93,14 +92,18 @@ def get_route(
         sequence.append((team_pair, leftover))
     sequence.pop()
 
+    teams: list[TeamPair] = []
+    change_setting: int = 0
+    write_report: int = 0
+    open_items: int = 0
+    watch_steps: int = 0
+
     if opts is None:
         
         # optsがNoneの場合 => ロードしない
         # 40で割り切れるようにいますぐバトルの生成を切り上げる。
         
         leftover = total_advances
-        teams: list[TeamPair] = []
-        change_setting: int = 0
 
         if len(sequence) == 0:
             if leftover % ADVANCES_BY_CHANGING_SETTING != 0:
@@ -117,12 +120,10 @@ def get_route(
                 leftover = sequence[0][1]
                 teams = [item[0] for item in sequence]
             else:
-                leftover = sequence[:last_index + 1][1]
+                leftover = sequence[:last_index + 1][-1][1]
                 teams = [item[0] for item in sequence][:last_index + 1]
 
         change_setting = math.floor(leftover / ADVANCES_BY_CHANGING_SETTING)
-        
-        return (teams, change_setting, 0, 0, 0)
         
     else:
         
@@ -145,6 +146,7 @@ def get_route(
             except IndexError:
                 raise CANNOT_REACH_ERROR
             leftover = sequence[-1][1] - advances_by_loading
+        teams = [item[0] for item in sequence]
 
         # レポート回数
         # もちもの消費が偶数である場合、奇数の消費手段はレポートのみになるため
@@ -169,9 +171,32 @@ def get_route(
 
         # 腰振り回数
         watch_steps = math.floor(leftover / ADVANCES_BY_WATCHING_STEPS)
+    
+    route = (teams, change_setting, write_report, open_items, watch_steps)
+    test_route(route, current_seed, target_seed, tsv, opts) # あまり自信がないのでチェック
+    return route
 
-        teams = [item[0] for item in sequence]
-        return (teams, change_setting, write_report, open_items, watch_steps)
+def test_route(
+    route: tuple[list[TeamPair], int, int, int, int],
+    current_seed: int,
+    target_seed: int,
+    tsv: int,
+    opts: Optional[tuple[int, int]]
+) -> None:
+    
+    teams, change_setting, write_report, open_items, watch_steps = route
+    advances_by_loading, advances_by_opening_items = opts if opts is not None else (0, 0)
+
+    test_lcg = LCG(current_seed)
+    for i in teams:
+        generate_quick_battle(test_lcg, tsv)
+    test_lcg.adv(change_setting * ADVANCES_BY_CHANGING_SETTING)
+    test_lcg.adv(advances_by_loading)
+    test_lcg.adv(write_report * ADVANCES_BY_WRITING_REPORT)
+    test_lcg.adv(open_items * advances_by_opening_items)
+    test_lcg.adv(watch_steps * ADVANCES_BY_WATCHING_STEPS)
+    if test_lcg.seed != target_seed:
+        raise Exception(f"Corner case has been found. Please report to the developer: \ncurrent_seed={current_seed:X}\ntarget_seed={target_seed:X}\ntsv={tsv}\nopts={opts}\nresult={(len(teams), change_setting, write_report, open_items, watch_steps)}\nactual={test_lcg.seed:X}")
 
 def decode(raw: tuple[int, int, int]) -> TeamPair:
     """xddbから受け取る生データを、実際の生成結果に変換する
