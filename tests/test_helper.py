@@ -1,4 +1,5 @@
 from datetime import timedelta
+from typing import Generator
 import unittest
 from xdhelper import *
 
@@ -55,6 +56,25 @@ class TestHelper(unittest.TestCase):
                 self.assertEqual(expected[2], actual[2])
                 self.assertEqual(expected[3], actual[3])
                 self.assertEqual(expected[4], actual[4])
+    
+    def test_get_current_seed(self):
+        DEFAULT_TSV = 65536
+        test_case = [
+            # ([], DEFAULT_TSV, 0x0),
+            # 2回で見つかるもの
+            # 3回で見つかるもの
+            # 4回（以上）で見つかるもの
+            # 途中で見失うもの
+        ]
+        for sequence, tsv, expected in test_case:
+            with self.subTest(sequence=sequence, tsv=tsv, expected=expected):
+                actual = get_current_seed(mock_generator(sequence), tsv)
+                self.assertEqual(expected, actual)
+
+def mock_generator(sequence: list[int]) -> Generator[int, None, None]:
+    for item in sequence:
+        yield item
+    return
 
 if __name__ == "__main__":
     unittest.main()

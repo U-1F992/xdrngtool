@@ -1,8 +1,8 @@
 from datetime import timedelta
 import math
-from typing import Optional, TypeAlias
+from typing import Generator, Optional, TypeAlias
 
-from xddb import PlayerTeam, EnemyTeam, generate_quick_battle
+from xddb import PlayerTeam, EnemyTeam, generate_quick_battle, XDDBClient
 from .lcg import LCG
 from .base_hp import PLAYER_BASE_HP, ENEMY_BASE_HP
 
@@ -87,7 +87,7 @@ def get_route(
     sequence: list[tuple[TeamPair, int]] = []
     
     while lcg.index_from(current_seed) <= total_advances:
-        team_pair = decode(generate_quick_battle(lcg, tsv))
+        team_pair = decode_quick_battle(generate_quick_battle(lcg, tsv))
         leftover = total_advances - lcg.index_from(current_seed)
         sequence.append((team_pair, leftover))
     sequence.pop()
@@ -198,7 +198,7 @@ def test_route(
     if test_lcg.seed != target_seed:
         raise Exception(f"Corner case has been found. Please report to the developer: \ncurrent_seed={current_seed:X}\ntarget_seed={target_seed:X}\ntsv={tsv}\nopts={opts}\nresult={(len(teams), change_setting, write_report, open_items, watch_steps)}\nactual={test_lcg.seed:X}")
 
-def decode(raw: tuple[int, int, int]) -> TeamPair:
+def decode_quick_battle(raw: tuple[int, int, int]) -> TeamPair:
     """xddbから受け取る生データを、実際の生成結果に変換する
 
     Args:
@@ -232,3 +232,71 @@ def is_even(value: int) -> bool:
     return value % 2 == 0
 def is_odd(value: int) -> bool:
     return value % 2 == 1
+
+def get_current_seed(generator: Generator[TeamPair, None, None], tsv: int = 0x10000) -> int:
+    """現在のseedを取得します。
+
+    ジェネレータの実装については、あらかじめいますぐバトル生成済み画面まで誘導しておき、B,A入力で再生成して画像認識しyieldすることを想定しています。
+
+    Args:
+        generator (Generator[TeamPair, None, None]): いますぐバトルの生成結果を返すジェネレータ。
+        tsv (int, optional):TSV。正確に指定されない場合、実際のいますぐバトルの生成結果および回数は異なる可能性が生じます。 Defaults to 0x10000.
+
+    Raises:
+        Exception: ジェネレータがreturnあるいは例外で停止した場合に発生します。誤操作などで回復不能（リセット）に陥った際に利用できます。
+
+    Returns:
+        int: 現在のseed
+    """
+    
+    client = XDDBClient()
+    
+    try:
+        first = generator.__next__()
+        second = generator.__next__()
+
+        search_result = client.search(first[0], first[1], second[0], second[1])
+        length = len(search_result)
+
+        if length == 1:
+            # 検索結果が1件の場合
+            return search_result.pop()
+
+        elif length == 0:
+            # 検索結果が0件の場合
+            # 2回取得からやり直す
+            return get_current_seed(generator, tsv)
+
+        else:
+            # 検索結果が2件以上の場合
+            # それぞれのseedからパーティ生成し、実際の生成結果と比較する
+            
+            next: set[int] = set()
+            
+            while True:
+                third = generator.__next__()
+                for seed in search_result:
+                    lcg = LCG(seed)
+                    generate_result = decode_quick_battle(generate_quick_battle(lcg, tsv))
+                    
+                    if generate_result == third:
+                        next.add(lcg.seed)
+                
+                if len(next) > 1:
+                    # それぞれから生成して、一致するものが複数件あった場合
+                    # 生成先seedからさらに生成して比較する
+                    search_result = next.copy()
+                    next.clear()
+                else:
+                    break;    
+            
+            if len(next) == 1:
+                # 1件の場合
+                return next.pop()
+            else:
+                # 0件になった場合
+                # 2回取得からやり直す
+                return get_current_seed(generator, tsv)
+        
+    except:
+        raise Exception("Iteration has been stopped.")
