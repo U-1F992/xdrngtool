@@ -20,28 +20,13 @@ def generate_next_team_pair() -> Generator[TeamPair, None, None]:
     
     pass
 
-def advance_by_moltres(wait_time: timedelta) -> None:
+def decide_target(target_seeds: list[int], tsv: int) -> tuple[int, tuple[int, timedelta]]:
 
-    # いますぐバトル生成済み画面から
-    # 1. ファイヤーが出るまで再生成
-    # 2. 戦闘に入りwait_time待機
-    # 3. 戦闘に入りいますぐバトル生成
-
-    pass
-
-def follow_route(route: tuple[list[TeamPair], int, int, int, int]) -> None:
-
-    # 経路に従って消費する
-
-    pass
-
-def execute_xd_rng(target_seeds: list[int], tsv: int, opts: tuple[int, int] | None, verifier: Callable[[], bool]) -> bool:
+    # 初期seed厳選
 
     current_seed: int = int()
     target: tuple[int, timedelta] = (int(), timedelta())
 
-    # 初期seed厳選
-    # 待機時間が十分短いものが出るまで
     while True:
         transition_to_quick_battle()
         try:
@@ -55,31 +40,47 @@ def execute_xd_rng(target_seeds: list[int], tsv: int, opts: tuple[int, int] | No
         
         if is_suitable_for_waiting(target[1]):
             break
-    
-    # いますぐバトルで大量消費し、再度現在のseedを確認
-    try:
-        advance_by_moltres(target[1])
-        current_seed = get_current_seed(generate_next_team_pair(), tsv)
-    except:
-        execute_xd_rng(target_seeds, tsv, opts, verifier)
+    return current_seed, target
 
+def advance_by_moltres(target: tuple[int, timedelta], tsv: int) -> int:
+
+    # いますぐバトル生成済み画面から
+    # 1. ファイヤーが出るまで再生成
+    # 2. 戦闘に入りwait_time待機
+    # 3. 戦闘から出て再度現在のseedを特定
+    
+    current_seed = get_current_seed(generate_next_team_pair(), tsv)
+    
     # 待機時間が消費前の待機時間より長いことで、消費しすぎたことを判定
     waited_too_long = get_wait_time(current_seed, target[0]) > target[1]
     if waited_too_long:
-        execute_xd_rng(target_seeds, tsv, opts, verifier)
-        return
+        raise Exception("Waited too long.")
+
+    return current_seed
+
+def follow_route(route: tuple[list[TeamPair], int, int, int, int]) -> None:
+
+    # 経路に従って消費する
+
+    pass
+
+def execute_xd_rng(target_seeds: list[int], tsv: int, opts: tuple[int, int] | None, verifier: Callable[[], bool]) -> bool:
+
+    # 初期seed厳選
+    current_seed, target = decide_target(tsv)
+    
+    # いますぐバトルで大量消費し、再度現在のseedを確認
+    try:
+        current_seed = advance_by_moltres(target[1])
+    except:
+        return execute_xd_rng(target_seeds, tsv, opts, verifier)
     
     # 経路に従い消費
     try:
-        route = get_route(
-            current_seed,
-            target[0],
-            tsv,
-            opts
-        )
+        route = get_route(current_seed, target[0], tsv, opts)
         follow_route(route)
     except:
-        execute_xd_rng(target_seeds, tsv, opts, verifier)
+        return execute_xd_rng(target_seeds, tsv, opts, verifier)
 
     # seed調整後に行う動作を実行
     return verifier()
