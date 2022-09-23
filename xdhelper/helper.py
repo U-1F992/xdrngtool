@@ -231,7 +231,7 @@ def decode_quick_battle(raw: tuple[int, int, int]) -> TeamPair:
 def is_even(value: int) -> bool:
     return value % 2 == 0
 def is_odd(value: int) -> bool:
-    return value % 2 == 1
+    return not is_even(value)
 
 def get_current_seed(generator: Generator[TeamPair, None, None], tsv: int = 0x10000) -> int:
     """現在のseedを取得します。
@@ -248,55 +248,59 @@ def get_current_seed(generator: Generator[TeamPair, None, None], tsv: int = 0x10
     Returns:
         int: 現在のseed
     """
+
+    CANCELED_ERROR = Exception("Iteration has been stopped.")
     
     client = XDDBClient()
     
     try:
         first = generator.__next__()
         second = generator.__next__()
-
-        search_result = client.search(first[0], first[1], second[0], second[1])
-        length = len(search_result)
-
-        if length == 1:
-            # 検索結果が1件の場合
-            return search_result.pop()
-
-        elif length == 0:
-            # 検索結果が0件の場合
-            # 2回取得からやり直す
-            return get_current_seed(generator, tsv)
-
-        else:
-            # 検索結果が2件以上の場合
-            # それぞれのseedからパーティ生成し、実際の生成結果と比較する
-            
-            next: set[int] = set()
-            
-            while True:
-                third = generator.__next__()
-                for seed in search_result:
-                    lcg = LCG(seed)
-                    generate_result = decode_quick_battle(generate_quick_battle(lcg, tsv))
-                    
-                    if generate_result == third:
-                        next.add(lcg.seed)
-                
-                if len(next) > 1:
-                    # それぞれから生成して、一致するものが複数件あった場合
-                    # 生成先seedからさらに生成して比較する
-                    search_result = next.copy()
-                    next.clear()
-                else:
-                    break;    
-            
-            if len(next) == 1:
-                # 1件の場合
-                return next.pop()
-            else:
-                # 0件になった場合
-                # 2回取得からやり直す
-                return get_current_seed(generator, tsv)
-        
     except:
-        raise Exception("Iteration has been stopped.")
+        raise CANCELED_ERROR
+
+    search_result = client.search(first[0], first[1], second[0], second[1])
+    length = len(search_result)
+
+    if length == 1:
+        # 検索結果が1件の場合
+        return search_result.pop()
+
+    elif length == 0:
+        # 検索結果が0件の場合
+        # 2回取得からやり直す
+        try:
+            return get_current_seed(generator, tsv)
+        except:
+            raise
+
+    else:
+        # 検索結果が2件以上の場合
+        # それぞれのseedからパーティ生成し、実際の生成結果と比較する
+        next: set[int] = set()
+        while True:
+            third = generator.__next__()
+            for seed in search_result:
+                lcg = LCG(seed)
+                generate_result = decode_quick_battle(generate_quick_battle(lcg, tsv))
+                
+                if generate_result == third:
+                    next.add(lcg.seed)
+            
+            if len(next) > 1:
+                # それぞれから生成して、一致するものが複数件あった場合
+                # 生成先seedからさらに生成して比較する
+                search_result = next.copy()
+                next.clear()
+            else:
+                break;    
+        
+        if len(next) == 0:
+            # 0件になった場合
+            # 2回取得からやり直す
+            try:
+                return get_current_seed(generator, tsv)
+            except:
+                raise
+        
+        return next.pop()
