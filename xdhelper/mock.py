@@ -47,8 +47,7 @@ def execute_xd_rng(target_seeds: list[int], tsv: int, opts: tuple[int, int] | No
         try:
             current_seed = get_current_seed(generate_next_team_pair(), tsv)
         except:
-            execute_xd_rng(target_seeds, tsv, opts, verifier)
-            return
+            continue
         
         target = sorted(
             [(target_seed, get_wait_time(current_seed, target_seed)) for target_seed in target_seeds]
@@ -58,9 +57,12 @@ def execute_xd_rng(target_seeds: list[int], tsv: int, opts: tuple[int, int] | No
             break
     
     # いますぐバトルで大量消費し、再度現在のseedを確認
-    advance_by_moltres(target[1])
-    current_seed = get_current_seed(generate_next_team_pair(), tsv)
-    
+    try:
+        advance_by_moltres(target[1])
+        current_seed = get_current_seed(generate_next_team_pair(), tsv)
+    except:
+        execute_xd_rng(target_seeds, tsv, opts, verifier)
+
     # 待機時間が消費前の待機時間より長いことで、消費しすぎたことを判定
     waited_too_long = get_wait_time(current_seed, target[0]) > target[1]
     if waited_too_long:
@@ -68,13 +70,16 @@ def execute_xd_rng(target_seeds: list[int], tsv: int, opts: tuple[int, int] | No
         return
     
     # 経路に従い消費
-    route = get_route(
-        current_seed,
-        target[0],
-        tsv,
-        opts
-    )
-    follow_route(route)
+    try:
+        route = get_route(
+            current_seed,
+            target[0],
+            tsv,
+            opts
+        )
+        follow_route(route)
+    except:
+        execute_xd_rng(target_seeds, tsv, opts, verifier)
 
     # seed調整後に行う動作を実行
     return verifier()
