@@ -1,12 +1,15 @@
 from datetime import timedelta
 import math
-from typing import Generator, Optional, TypeAlias
+from typing import Generator, TypeAlias
 
 from xddb import PlayerTeam, EnemyTeam, generate_quick_battle, XDDBClient
 from .lcg import LCG
 from .base_hp import PLAYER_BASE_HP, ENEMY_BASE_HP
 
 TeamPair: TypeAlias = tuple[tuple[PlayerTeam, int, int], tuple[EnemyTeam, int, int]]
+
+# 指定されない場合に使用するTSV
+DEFAULT_TSV = 0x10000
 
 # 最短の待機時間
 # 戦闘にファイヤーが登場するまで、および降参してから消費が止まるまでにはラグがあるため、短すぎると制御が難しいです。
@@ -63,21 +66,21 @@ def is_suitable_for_waiting(wait_time: timedelta) -> bool:
 def get_route(
     current_seed: int,
     target_seed: int,
-    tsv: int = 0x10000,
-    opts: Optional[tuple[int, int]] = None
+    tsv: int = DEFAULT_TSV,
+    opts: tuple[int, int] | None = None
 ) -> tuple[list[TeamPair], int, int, int, int]:
     """消費経路を算出します。
 
     Args:
         current_seed (int): 現在のseed
         target_seed (int): 目標のseed
-        tsv (int, optional): TSV。正確に指定されない場合、実際のいますぐバトルの生成結果および回数は異なる可能性が生じます。 Defaults to 0x10000.
-        opts (Optional[tuple[int, int]], optional): ロード後の使用する消費数（ロード時の強制消費数、もちものを開く際の消費数）。 Defaults to None.
+        tsv (int, optional): TSV。正確に指定されない場合、実際のいますぐバトルの生成結果および回数は異なる可能性が生じます。 Defaults to DEFAULT_TSV.
+        opts (tuple[int, int] | None, optional): ロード後の使用する消費数（ロード時の強制消費数、もちものを開く際の消費数）。 Defaults to None.
 
     Returns:
         tuple[list[TeamPair], int, int, int, int]: 消費経路（いますぐバトルの生成リスト、設定変更回数、レポート回数、もちものを開く回数、腰振りを見る回数）
     """
-
+    
     CANNOT_REACH_ERROR = Exception(f"No way to reach {target_seed:X} from {current_seed:X}.")
 
     total_advances = LCG(target_seed).index_from(current_seed)
@@ -181,7 +184,7 @@ def test_route(
     current_seed: int,
     target_seed: int,
     tsv: int,
-    opts: Optional[tuple[int, int]]
+    opts: tuple[int, int] | None
 ) -> None:
     
     teams, change_setting, write_report, open_items, watch_steps = route
@@ -233,14 +236,14 @@ def is_even(value: int) -> bool:
 def is_odd(value: int) -> bool:
     return not is_even(value)
 
-def get_current_seed(generator: Generator[TeamPair, None, None], tsv: int = 0x10000) -> int:
+def get_current_seed(generator: Generator[TeamPair, None, None], tsv: int = DEFAULT_TSV) -> int:
     """現在のseedを取得します。
 
     ジェネレータの実装については、あらかじめいますぐバトル生成済み画面まで誘導しておき、B,A入力で再生成して画像認識しyieldすることを想定しています。
 
     Args:
         generator (Generator[TeamPair, None, None]): いますぐバトルの生成結果を返すジェネレータ。
-        tsv (int, optional):TSV。正確に指定されない場合、実際のいますぐバトルの生成結果および回数は異なる可能性が生じます。 Defaults to 0x10000.
+        tsv (int, optional):TSV。正確に指定されない場合、実際のいますぐバトルの生成結果および回数は異なる可能性が生じます。 Defaults to DEFAULT_TSV.
 
     Raises:
         Exception: ジェネレータがreturnあるいは例外で停止した場合に発生します。誤操作などで回復不能（リセット）に陥った際に利用できます。
@@ -261,6 +264,7 @@ def get_current_seed(generator: Generator[TeamPair, None, None], tsv: int = 0x10
 
     search_result = client.search(first[0], first[1], second[0], second[1])
     length = len(search_result)
+    print([f"{ret:X}" for ret in search_result])
 
     if length == 1:
         # 検索結果が1件の場合
@@ -273,7 +277,7 @@ def get_current_seed(generator: Generator[TeamPair, None, None], tsv: int = 0x10
             return get_current_seed(generator, tsv)
         except:
             raise
-
+    
     else:
         # 検索結果が2件以上の場合
         # それぞれのseedからパーティ生成し、実際の生成結果と比較する
@@ -282,7 +286,10 @@ def get_current_seed(generator: Generator[TeamPair, None, None], tsv: int = 0x10
             third = generator.__next__()
             for seed in search_result:
                 lcg = LCG(seed)
-                generate_result = decode_quick_battle(generate_quick_battle(lcg, tsv))
+                raw = generate_quick_battle(lcg, tsv)
+                print(f"{raw[2]:X}")
+                generate_result = decode_quick_battle(raw)
+                print(generate_result)
                 
                 if generate_result == third:
                     next.add(lcg.seed)

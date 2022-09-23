@@ -1,5 +1,5 @@
 from datetime import timedelta
-from typing import Generator
+from typing import Generator, TypeVar
 import unittest
 from xdhelper import *
 
@@ -10,7 +10,7 @@ class TestHelper(unittest.TestCase):
             (0x0, 0xca71efd8, timedelta(hours=1)),
         ]
         for current_seed, target_seed, expected in test_case:
-            with self.subTest(current_seed=current_seed, target_seed=target_seed, expected=expected):
+            with self.subTest(current_seed=f"{current_seed:X}", target_seed=f"{target_seed:X}", expected=expected):
                 actual = get_wait_time(current_seed, target_seed)
                 self.assertEqual(expected, actual)
 
@@ -35,7 +35,7 @@ class TestHelper(unittest.TestCase):
             (0x410df1e7, 0xbfb6e0c8, (5, 0)),
         ]
         for current_seed, target_seed, expected in test_case:
-            with self.subTest(current_seed=current_seed, target_seed=target_seed, expected=expected):
+            with self.subTest(current_seed=f"{current_seed:X}", target_seed=f"{target_seed:X}", expected=expected):
                 actual = get_route(current_seed, target_seed)
                 self.assertEqual(expected[0], len(actual[0]))
                 self.assertEqual(expected[1], actual[1])
@@ -43,13 +43,12 @@ class TestHelper(unittest.TestCase):
     def test_get_route_2(self):
         """ロードする場合
         """
-        DEFAULT_TSV = 65536
         test_case = [
             (0xfe645768, 0xff7eafab, DEFAULT_TSV, (24, 13), (688, 0, 7, 0, 0)),
             (0x88144b1c, 0x143956ec, DEFAULT_TSV, (24, 13), (0, 1, 0, 0, 8)),
         ]
         for current_seed, target_seed, tsv, opts, expected in test_case:
-            with self.subTest(current_seed=current_seed, target_seed=target_seed, tsv=tsv, opts=opts, expected=expected):
+            with self.subTest(current_seed=f"{current_seed:X}", target_seed=f"{target_seed:X}", tsv=tsv, opts=opts, expected=expected):
                 actual = get_route(current_seed, target_seed, tsv, opts)
                 self.assertEqual(expected[0], len(actual[0]))
                 self.assertEqual(expected[1], actual[1])
@@ -58,23 +57,39 @@ class TestHelper(unittest.TestCase):
                 self.assertEqual(expected[4], actual[4])
     
     def test_get_current_seed(self):
-        DEFAULT_TSV = 65536
-        test_case = [
-            # ([], DEFAULT_TSV, 0x0),
+        test_case: list[tuple[list[TeamPair, int, int]]] = [
             # 2回で見つかるもの
+            (
+                [
+                    ((PlayerTeam.Rayquaza, 346, 235), (EnemyTeam.Zapdos, 313, 317)),
+                    ((PlayerTeam.Mewtwo, 395, 346), (EnemyTeam.Kangaskhan, 350, 335))
+                ],
+                DEFAULT_TSV, 0x4d8483e7
+            ),
+            (
+                [
+                    ((PlayerTeam.Mew, 328, 344), (EnemyTeam.Latias, 344, 279)),
+                    ((PlayerTeam.Mew, 336, 304), (EnemyTeam.Zapdos, 321, 311))
+                ],
+                DEFAULT_TSV, 0x6E4EF1C9
+            ),
             # 3回で見つかるもの
+            # (
+            #     [
+            #         ((PlayerTeam.Mewtwo, 362, 349), (EnemyTeam.Articuno, 320, 388)),
+            #         ((PlayerTeam.Mewtwo, 342, 352), (EnemyTeam.Articuno, 325, 384)),
+            #         ((PlayerTeam.Mewtwo, 335, 382), (EnemyTeam.Articuno, 331, 361)),
+            #     ],
+            #     1784, 0xd9202593
+            # ),
             # 4回（以上）で見つかるもの
             # 途中で見失うもの
         ]
         for sequence, tsv, expected in test_case:
-            with self.subTest(sequence=sequence, tsv=tsv, expected=expected):
-                actual = get_current_seed(mock_generator(sequence), tsv)
+            with self.subTest(sequence=sequence, tsv=tsv, expected=f"{expected:X}"):
+                generator = (item for item in sequence)
+                actual = get_current_seed(generator, tsv)
                 self.assertEqual(expected, actual)
-
-def mock_generator(sequence: list[int]) -> Generator[int, None, None]:
-    for item in sequence:
-        yield item
-    return
 
 if __name__ == "__main__":
     unittest.main()
