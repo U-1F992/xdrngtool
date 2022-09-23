@@ -1,94 +1,74 @@
-from time import sleep
-from typing import Callable, Generator
+from typing import Callable, TypeAlias
+
+from .constant import DEFAULT_TSV
 from .helper import *
 
-class XDRNGTool():
+Operations: TypeAlias = tuple[
+    Callable[[], None],
+    Callable[[], TeamPair],
+    Callable[[], None],
+    Callable[[], None],
+    Callable[[], None],
+    Callable[[], None],
+    Callable[[], None],
+    Callable[[], None],
+    Callable[[], None],
+    Callable[[], None],
+    Callable[[], None]
+]
+
+def execute_operation(
+    operations: Operations, 
+    verifier: Callable[[], bool],
+    target_seeds: list[int], 
+    tsv: int = DEFAULT_TSV, 
+    opts: tuple[int, int] | None = None, 
+) -> bool:
+    """ポケモンXDの乱数調整を行います。
+
+    タプルには以下を動作を行うコールバック関数を登録します
+
+    - リセットし、1回いますぐバトルを生成した画面まで誘導する\n
+    - 現在のいますぐバトル生成結果を破棄し、再度生成して渡す\n
+    - いますぐバトル生成済み画面から、「せってい」にカーソルを合わせる\n
+    - 「せってい」にカーソルが合った状態から、設定を変更して保存、「せってい」にカーソルを戻す\n
+    - 「せってい」にカーソルが合った状態からロードし、メニューを開き「レポート」にカーソルを合わせる\n
+    - 「レポート」にカーソルが合った状態から、レポートを書き、「レポート」にカーソルを戻す\n
+    - 「レポート」にカーソルが合った状態から、「もちもの」にカーソルを合わせる\n
+    - 「もちもの」にカーソルが合った状態から、もちものを開いて閉じる\n
+    - メニューが開いている状態から、メニューを閉じ腰振り1回分待機し、メニューを開く\n
+
+    Args:
+        operations (Operations): 上記参照
+        verifier (Callable[[], bool]): seed調整後に実行し、成否を返すコールバック関数（エンカウント・捕獲・HP素早さ判定・ID生成など...）
+        target_seeds (list[int]): 目標seedのリスト
+        tsv (int): TSV。指定しない場合、いますぐバトルの生成結果に齟齬が生じ再計算が発生する可能性があります。 Defaults to DEFAULT_TSV.
+        opts (tuple[int, int] | None): ロード後に使用する消費数（ロード時の強制消費数、もちものを開く際の消費数）。 Defaults to None.
+
+    Returns:
+        bool: 試行の成否
+    """
     
-    def __init__(
-        self,
-        transition_to_quick_battle: Callable[[], None],
-        generate_next_team_pair: Callable[[], TeamPair],
-        enter_quick_battle: Callable[[], None],
-        exit_quick_battle: Callable[[], None],
+    (
+        transition_to_quick_battle, 
+        generate_next_team_pair, 
+        enter_quick_battle, 
+        exit_quick_battle, 
+        set_cursor_to_setting, 
+        change_setting, 
+        load, 
+        write_report, 
+        set_cursor_to_items, 
+        open_items, 
+        watch_steps
+    ) = operations
 
-        # 消費関連の動作
-
-        verifier: Callable[[], bool],
-    ) -> None:
-        self.transition_to_quick_battle = transition_to_quick_battle
-        self.generate_next_team_pair = generate_next_team_pair
-        self.enter_quick_battle = enter_quick_battle
-        self.exit_quick_battle = exit_quick_battle
-        self.verifier = verifier
+    current_seed, target = decide_target(target_seeds, tsv, transition_to_quick_battle, generate_next_team_pair)
     
-    def execute(self, target_seeds: list[int], tsv: int, opts: tuple[int, int] | None) -> bool:
-
-        # 初期seed厳選
-        current_seed, target = self.decide_target(tsv)
-        
-        try:
-            # いますぐバトルで大量消費し、再度現在のseedを確認
-            current_seed = self.advance_by_moltres(target[1])
-            
-            # 経路に従い消費
-            self.follow_route(current_seed, target, tsv, opts)
-        except:
-            return self.execute(target_seeds, tsv, opts)
-        
-        # seed調整後に行う動作を実行
-        return self.verifier()
-
-    def decide_target(self, target_seeds: list[int], tsv: int) -> tuple[int, tuple[int, timedelta]]:
-
-        # 初期seed厳選
-
-        current_seed: int = int()
-        target: tuple[int, timedelta] = (int(), timedelta())
-
-        while True:
-            self.transition_to_quick_battle()
-            try:
-                current_seed = get_current_seed(self.generate_next_team_pair, tsv)
-            except:
-                continue
-            
-            target = sorted(
-                [(target_seed, get_wait_time(current_seed, target_seed)) for target_seed in target_seeds]
-            )[0]
-            
-            if is_suitable_for_waiting(target[1]):
-                break
-        return current_seed, target
-
-    def advance_by_moltres(self, target: tuple[int, timedelta], tsv: int) -> int:
-
-        # いますぐバトル生成済み画面から
-        # 1. ファイヤーが出るまで再生成
-        # 2. 戦闘に入りwait_time待機
-        # 3. 戦闘から出て再度現在のseedを特定
-
-        while True:
-            team_pair = self.generate_next_team_pair()
-            if team_pair[1][0] == EnemyTeam.Moltres:
-                break
-
-        self.enter_quick_battle()
-        sleep(target[1].total_seconds)
-        self.exit_quick_battle()
-        
-        current_seed = get_current_seed(self.generate_next_team_pair, tsv)
-        
-        # 待機時間が消費前の待機時間より長いことで、消費しすぎたことを判定
-        waited_too_long = get_wait_time(current_seed, target[0]) > target[1]
-        if waited_too_long:
-            raise Exception("Waited too long.")
-
-        return current_seed
-
-    def follow_route(self, current_seed: int, target: tuple[int, timedelta], tsv: int, opts: tuple[int, int] | None) -> None:
-
-        # 経路に従って消費する
-
-        route = get_route(current_seed, target[0], tsv, opts)
-
-        pass
+    try:
+        current_seed = advance_by_moltres(target[1], tsv, generate_next_team_pair, enter_quick_battle, exit_quick_battle)
+        advance_according_to_route(current_seed, target, tsv, opts, generate_next_team_pair, set_cursor_to_setting, change_setting, load, write_report, set_cursor_to_items, open_items, watch_steps)
+    except:
+        return execute_operation(target_seeds, tsv, opts)
+    
+    return verifier()
