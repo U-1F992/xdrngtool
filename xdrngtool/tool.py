@@ -7,7 +7,7 @@ class XDRNGTool():
     def __init__(
         self,
         transition_to_quick_battle: Callable[[], None],
-        generate_next_team_pair: Generator[TeamPair, None, None],
+        generate_next_team_pair: Callable[[], TeamPair],
         enter_quick_battle: Callable[[], None],
         exit_quick_battle: Callable[[], None],
 
@@ -48,7 +48,7 @@ class XDRNGTool():
         while True:
             self.transition_to_quick_battle()
             try:
-                current_seed = get_current_seed(self.generate_next_team_pair(), tsv)
+                current_seed = get_current_seed(self.generate_next_team_pair, tsv)
             except:
                 continue
             
@@ -67,7 +67,8 @@ class XDRNGTool():
         # 2. 戦闘に入りwait_time待機
         # 3. 戦闘から出て再度現在のseedを特定
 
-        for team_pair in self.generate_next_team_pair():
+        while True:
+            team_pair = self.generate_next_team_pair()
             if team_pair[1][0] == EnemyTeam.Moltres:
                 break
 
@@ -75,7 +76,7 @@ class XDRNGTool():
         sleep(target[1].total_seconds)
         self.exit_quick_battle()
         
-        current_seed = get_current_seed(self.generate_next_team_pair(), tsv)
+        current_seed = get_current_seed(self.generate_next_team_pair, tsv)
         
         # 待機時間が消費前の待機時間より長いことで、消費しすぎたことを判定
         waited_too_long = get_wait_time(current_seed, target[0]) > target[1]

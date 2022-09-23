@@ -1,6 +1,6 @@
 from datetime import timedelta
 import math
-from typing import Generator, TypeAlias
+from typing import Callable, Generator, TypeAlias
 
 from xddb import PlayerTeam, EnemyTeam, generate_quick_battle, XDDBClient
 from .lcg import LCG
@@ -236,31 +236,29 @@ def is_even(value: int) -> bool:
 def is_odd(value: int) -> bool:
     return not is_even(value)
 
-def get_current_seed(generator: Generator[TeamPair, None, None], tsv: int = DEFAULT_TSV) -> int:
+def get_current_seed(generate_next_team_pair: Callable[[], TeamPair], tsv: int = DEFAULT_TSV) -> int:
     """現在のseedを取得します。
 
-    ジェネレータの実装については、あらかじめいますぐバトル生成済み画面まで誘導しておき、B,A入力で再生成して画像認識しyieldすることを想定しています。
+    コールバックの実装については、あらかじめいますぐバトル生成済み画面まで誘導しておき、B,A入力で再生成して画像認識しreturnすることを想定しています。
 
     Args:
-        generator (Generator[TeamPair, None, None]): いますぐバトルの生成結果を返すジェネレータ。
+        generate_next_team_pair (Callable[[], TeamPair]): いますぐバトルの生成結果を返すコールバック。
         tsv (int, optional):TSV。正確に指定されない場合、実際のいますぐバトルの生成結果および回数は異なる可能性が生じます。 Defaults to DEFAULT_TSV.
 
     Raises:
-        Exception: ジェネレータがreturnあるいは例外で停止した場合に発生します。誤操作などで回復不能（リセット）に陥った際に利用できます。
+        Exception: コールバックが例外で停止した場合に発生します。誤操作などで回復不能（リセット）に陥った際に利用できます。
 
     Returns:
         int: 現在のseed
     """
-
-    CANCELED_ERROR = Exception("Iteration has been stopped.")
     
     client = XDDBClient()
     
     try:
-        first = generator.__next__()
-        second = generator.__next__()
+        first = generate_next_team_pair()
+        second = generate_next_team_pair()
     except:
-        raise CANCELED_ERROR
+        raise
 
     search_result = client.search(first[0], first[1], second[0], second[1])
     length = len(search_result)
@@ -274,7 +272,7 @@ def get_current_seed(generator: Generator[TeamPair, None, None], tsv: int = DEFA
         # 検索結果が0件の場合
         # 2回取得からやり直す
         try:
-            return get_current_seed(generator, tsv)
+            return get_current_seed(generate_next_team_pair, tsv)
         except:
             raise
     
@@ -283,7 +281,7 @@ def get_current_seed(generator: Generator[TeamPair, None, None], tsv: int = DEFA
         # それぞれのseedからパーティ生成し、実際の生成結果と比較する
         next: set[int] = set()
         while True:
-            third = generator.__next__()
+            third = generate_next_team_pair()
             for seed in search_result:
                 lcg = LCG(seed)
                 raw = generate_quick_battle(lcg, tsv)
@@ -306,7 +304,7 @@ def get_current_seed(generator: Generator[TeamPair, None, None], tsv: int = DEFA
             # 0件になった場合
             # 2回取得からやり直す
             try:
-                return get_current_seed(generator, tsv)
+                return get_current_seed(generate_next_team_pair, tsv)
             except:
                 raise
         

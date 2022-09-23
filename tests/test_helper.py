@@ -87,8 +87,8 @@ class TestHelper(unittest.TestCase):
         ]
         for sequence, tsv, expected in test_case:
             with self.subTest(sequence=sequence, tsv=tsv, expected=f"{expected:X}"):
-                generator = (item for item in sequence)
-                actual = get_current_seed(generator, tsv)
+                callback = lambda: sequence.pop(0)
+                actual = get_current_seed(callback, tsv)
                 self.assertEqual(expected, actual)
 
 if __name__ == "__main__":

@@ -7,7 +7,7 @@ def transition_to_quick_battle() -> None:
     
     pass
 
-def generate_next_team_pair() -> Generator[TeamPair, None, None]:
+def generate_next_team_pair() -> TeamPair:
     
     # いますぐバトル生成済み画面から
     # 1. B入力（破棄）
