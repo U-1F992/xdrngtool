@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "xdhelper"
+name = "xdrngtool"
 version = "0.1.0"
 description = ""
 authors = ["Koutaro Mukai <mukai.k1011k@outlook.jp>"]

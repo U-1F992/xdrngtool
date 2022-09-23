@@ -1,4 +1,4 @@
-# xdhelper
+# xdrngtool
 
 ポケモンXD乱数調整用関数群
 
@@ -11,6 +11,7 @@
 
 ```powershell
 # test
+pip install -e .
 poetry run python .\tests\test_helper.py
 ```
 
@@ -19,7 +20,7 @@ poetry run python .\tests\test_helper.py
 Python向けの疑似乱数生成器ライブラリが出たらそれに乗り換えます。
 
 ```powershell
-Invoke-WebRequest https://github.com/yatsuna827/xddb/raw/main/src/xddb/lcg.py -o .\xdhelper\lcg.py
+Invoke-WebRequest https://github.com/yatsuna827/xddb/raw/main/src/xddb/lcg.py -o .\xdrngtool\lcg.py
 # or like this
 # curl -L
 ```
