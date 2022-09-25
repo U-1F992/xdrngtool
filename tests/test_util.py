@@ -1,4 +1,5 @@
 from datetime import timedelta
+from typing import List, Tuple
 import unittest
 
 from xdrngtool import *
@@ -57,7 +58,7 @@ class TestUtil(unittest.TestCase):
                 self.assertEqual(expected[4], actual[4])
     
     def test_get_current_seed(self):
-        test_case: list[tuple[list[TeamPair, int, int]]] = [
+        test_case: List[Tuple[List[TeamPair, int, int]]] = [
             # 2回で見つかるもの
             (
                 [

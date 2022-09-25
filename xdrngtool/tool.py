@@ -1,9 +1,9 @@
-from typing import Callable, TypeAlias
+from typing import Callable, List, Tuple
 
 from .constant import DEFAULT_TSV
 from .helper import *
 
-Operations: TypeAlias = tuple[
+Operations = Tuple[
     Callable[[], None],
     Callable[[], TeamPair],
     Callable[[], None],
@@ -20,9 +20,9 @@ Operations: TypeAlias = tuple[
 def execute_operation(
     operations: Operations, 
     verifier: Callable[[], bool],
-    target_seeds: list[int], 
+    target_seeds: List[int], 
     tsv: int = DEFAULT_TSV, 
-    opts: tuple[int, int] | None = None, 
+    opts: Optional[Tuple[int, int]] = None, 
 ) -> bool:
     """ポケモンXDの乱数調整を行います。
 
@@ -43,9 +43,9 @@ def execute_operation(
     Args:
         operations (Operations): 
         verifier (Callable[[], bool]): seed調整後に実行し、成否を返すコールバック関数（エンカウント・捕獲・HP素早さ判定・ID生成など...）
-        target_seeds (list[int]): 目標seedのリスト
+        target_seeds (List[int]): 目標seedのリスト
         tsv (int): TSV。指定しない場合、いますぐバトルの生成結果に齟齬が生じ再計算が発生する可能性があります。 Defaults to DEFAULT_TSV.
-        opts (tuple[int, int] | None): ロード後に使用する消費数（ロード時の強制消費数、もちものを開く際の消費数）。 Defaults to None.
+        opts (Optional[Tuple[int, int]]): ロード後に使用する消費数（ロード時の強制消費数、もちものを開く際の消費数）。 Defaults to None.
 
     Returns:
         bool: 試行の成否

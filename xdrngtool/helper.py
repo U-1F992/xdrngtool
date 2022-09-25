@@ -1,31 +1,31 @@
 from datetime import timedelta
 from time import sleep
-from typing import Callable
+from typing import Callable, List, Optional, Tuple
 
 from xddb import EnemyTeam
 
 from .util import TeamPair, get_current_seed, get_wait_time, is_suitable_for_waiting, decide_route
 
 def decide_target(
-    target_seeds: list[int], 
+    target_seeds: List[int], 
     tsv: int, 
     transition_to_quick_battle: Callable[[], None], 
     generate_next_team_pair: Callable[[], TeamPair]
-) -> tuple[int, tuple[int, timedelta]]:
+) -> Tuple[int, Tuple[int, timedelta]]:
     """初期seed厳選を行い、目標seedを決定します。
 
     Args:
-        target_seeds (list[int]): 目標seedのリスト
+        target_seeds (List[int]): 目標seedのリスト
         tsv (int): TSV
         transition_to_quick_battle (Callable[[], None]): リセットし、1回いますぐバトルを生成した画面まで誘導するコールバック関数
         generate_next_team_pair (Callable[[], TeamPair]): 現在のいますぐバトル生成結果を破棄し、再度生成して渡すコールバック関数
 
     Returns:
-        tuple[int, tuple[int, timedelta]]: 目標seedと待機時間のタプル
+        Tuple[int, Tuple[int, timedelta]]: 目標seedと待機時間のタプル
     """
 
     current_seed: int = int()
-    target: tuple[int, timedelta] = (int(), timedelta())
+    target: Tuple[int, timedelta] = (int(), timedelta())
 
     while True:
         transition_to_quick_battle()
@@ -43,7 +43,7 @@ def decide_target(
     return current_seed, target
 
 def advance_by_moltres(
-    target: tuple[int, timedelta],
+    target: Tuple[int, timedelta],
     tsv: int,
     generate_next_team_pair: Callable[[], TeamPair],
     enter_quick_battle: Callable[[], None], 
@@ -52,7 +52,7 @@ def advance_by_moltres(
     """いますぐバトルにファイヤーを出し、大量消費します。
 
     Args:
-        target (tuple[int, timedelta]): 目標seedと待機時間のタプル
+        target (Tuple[int, timedelta]): 目標seedと待機時間のタプル
         tsv (int): TSV
         generate_next_team_pair (Callable[[], TeamPair]): 現在のいますぐバトル生成結果を破棄し、再度生成して渡すコールバック関数
         enter_quick_battle (Callable[[], None]): いますぐバトルを開始するコールバック関数
@@ -90,9 +90,9 @@ def advance_by_moltres(
 
 def advance_according_to_route(
     current_seed: int,
-    target: tuple[int, timedelta],
+    target: Tuple[int, timedelta],
     tsv: int,
-    opts: tuple[int, int] | None,
+    opts: Optional[Tuple[int, int]],
     generate_next_team_pair: Callable[[], TeamPair],
     set_cursor_to_setting: Callable[[], None],
     change_setting: Callable[[], None],
@@ -106,9 +106,9 @@ def advance_according_to_route(
 
     Args:
         current_seed (int): 現在のseed
-        target (tuple[int, timedelta]): 目標seedと待機時間のタプル
+        target (Tuple[int, timedelta]): 目標seedと待機時間のタプル
         tsv (int): TSV
-        opts (tuple[int, int] | None): ロード後に使用する消費数（ロード時の強制消費数、もちものを開く際の消費数）
+        opts (Optional[Tuple[int, int]]): ロード後に使用する消費数（ロード時の強制消費数、もちものを開く際の消費数）
         generate_next_team_pair (Callable[[], TeamPair]): 現在のいますぐバトル生成結果を破棄し、再度生成して渡すコールバック関数
         set_cursor_to_setting (Callable[[], None]): いますぐバトル生成済み画面から、「せってい」にカーソルを合わせるコールバック関数
         change_setting (Callable[[], None]): 「せってい」にカーソルが合った状態から、設定を変更して保存、「せってい」にカーソルを戻すコールバック関数
