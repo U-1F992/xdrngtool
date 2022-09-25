@@ -1,4 +1,5 @@
 from datetime import timedelta
+from typing import List, Tuple
 import unittest
 
 from xdrngtool import *
@@ -44,12 +45,12 @@ class TestUtil(unittest.TestCase):
         """ロードする場合
         """
         test_case = [
-            (0xfe645768, 0xff7eafab, DEFAULT_TSV, (24, 13), (728, 0, 7, 0, 0)),
-            (0x88144b1c, 0x143956ec, DEFAULT_TSV, (24, 13), (0, 1, 0, 0, 8)),
+            (0xfe645768, 0xff7eafab, DEFAULT_TSV, 13, (728, 0, 7, 0, 0)),
+            (0x88144b1c, 0x143956ec, DEFAULT_TSV, 13, (0, 1, 0, 0, 8)),
         ]
-        for current_seed, target_seed, tsv, opts, expected in test_case:
-            with self.subTest(current_seed=f"{current_seed:X}", target_seed=f"{target_seed:X}", tsv=tsv, opts=opts, expected=expected):
-                actual = decide_route(current_seed, target_seed, tsv, opts)
+        for current_seed, target_seed, tsv, advances_by_opening_items, expected in test_case:
+            with self.subTest(current_seed=f"{current_seed:X}", target_seed=f"{target_seed:X}", tsv=tsv, advances_by_opening_items=advances_by_opening_items, expected=expected):
+                actual = decide_route(current_seed, target_seed, tsv, advances_by_opening_items)
                 self.assertEqual(expected[0], len(actual[0]))
                 self.assertEqual(expected[1], actual[1])
                 self.assertEqual(expected[2], actual[2])
@@ -57,7 +58,7 @@ class TestUtil(unittest.TestCase):
                 self.assertEqual(expected[4], actual[4])
     
     def test_get_current_seed(self):
-        test_case: list[tuple[list[TeamPair, int, int]]] = [
+        test_case = [
             # 2回で見つかるもの
             (
                 [
