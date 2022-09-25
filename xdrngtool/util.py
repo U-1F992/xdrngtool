@@ -40,7 +40,7 @@ def decide_route(
     current_seed: int,
     target_seed: int,
     tsv: int = DEFAULT_TSV,
-    opts: Optional[Tuple[int, int]] = None
+    advances_by_opening_items: Optional[int] = None
 ) -> Tuple[List[TeamPair], int, int, int, int]:
     """消費経路を算出します。
 
@@ -48,7 +48,7 @@ def decide_route(
         current_seed (int): 現在のseed
         target_seed (int): 目標のseed
         tsv (int, optional): TSV。正確に指定されない場合、実際のいますぐバトルの生成結果および回数は異なる可能性が生じます。 Defaults to DEFAULT_TSV.
-        opts (Optional[Tuple[int, int]], optional): ロード後に使用する消費数（ロード時の強制消費数、もちものを開く際の消費数）。 Defaults to None.
+        advances_by_opening_items (Optional[int], optional): もちものを開く際の消費数。 Defaults to None.
 
     Returns:
         Tuple[List[TeamPair], int, int, int, int]: 消費経路（いますぐバトルの生成リスト、設定変更回数、レポート回数、もちものを開く回数、腰振りを見る回数）
@@ -74,9 +74,9 @@ def decide_route(
     open_items: int = 0
     watch_steps: int = 0
 
-    if opts is None:
+    if advances_by_opening_items is None:
         
-        # optsがNoneの場合 => ロードしない
+        # advances_by_opening_itemsがNoneの場合 => ロードしない
         # 40で割り切れるようにいますぐバトルの生成を切り上げる。
         
         leftover = total_advances
@@ -103,10 +103,10 @@ def decide_route(
         
     else:
         
-        # optsがNoneでない場合 => ロードする
+        # advances_by_opening_itemsがNoneでない場合 => ロードする
         # 40a + by_loading + 63b + by_opening_items*c + 2d で表す。
         
-        advances_by_loading, advances_by_opening_items = opts
+        advances_by_loading = (advances_by_opening_items - 1) * 2
         leftover = total_advances
         if len(sequence) == 0:
             leftover -= advances_by_loading
@@ -149,7 +149,7 @@ def decide_route(
         watch_steps = math.floor(leftover / ADVANCES_BY_WATCHING_STEPS)
     
     route = (teams, change_setting, write_report, open_items, watch_steps)
-    test_route(route, current_seed, target_seed, tsv, opts) # あまり自信がないのでチェック
+    test_route(route, current_seed, target_seed, tsv, advances_by_opening_items) # あまり自信がないのでチェック
     return route
 
 def test_route(
@@ -157,11 +157,11 @@ def test_route(
     current_seed: int,
     target_seed: int,
     tsv: int,
-    opts: Optional[Tuple[int, int]]
+    advances_by_opening_items: Optional[int]
 ) -> None:
     
     teams, change_setting, write_report, open_items, watch_steps = route
-    advances_by_loading, advances_by_opening_items = opts if opts is not None else (0, 0)
+    advances_by_loading = (advances_by_opening_items - 1) * 2 if advances_by_opening_items is not None else 0
 
     test_lcg = LCG(current_seed)
     for i in teams:
@@ -169,10 +169,11 @@ def test_route(
     test_lcg.adv(change_setting * ADVANCES_BY_CHANGING_SETTING)
     test_lcg.adv(advances_by_loading)
     test_lcg.adv(write_report * ADVANCES_BY_WRITING_REPORT)
-    test_lcg.adv(open_items * advances_by_opening_items)
+    if advances_by_opening_items is not None:
+        test_lcg.adv(open_items * advances_by_opening_items)
     test_lcg.adv(watch_steps * ADVANCES_BY_WATCHING_STEPS)
     if test_lcg.seed != target_seed:
-        raise Exception(f"Corner case has been found. Please report to the developer: \ncurrent_seed={current_seed:X}\ntarget_seed={target_seed:X}\ntsv={tsv}\nopts={opts}\nresult={(len(teams), change_setting, write_report, open_items, watch_steps)}\nactual={test_lcg.seed:X}")
+        raise Exception(f"Corner case has been found. Please report to the developer: \ncurrent_seed={current_seed:X}\ntarget_seed={target_seed:X}\ntsv={tsv}\nadvances_by_opening_items={advances_by_opening_items}\nresult={(len(teams), change_setting, write_report, open_items, watch_steps)}\nactual={test_lcg.seed:X}")
 
 def decode_quick_battle(raw: Tuple[int, int, int]) -> TeamPair:
     """xddbから受け取る生データを、実際の生成結果に変換する

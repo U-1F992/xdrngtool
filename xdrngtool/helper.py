@@ -76,7 +76,7 @@ def advance_by_moltres(
             break
 
     enter_quick_battle()
-    sleep(target[1].total_seconds)
+    sleep(target[1].total_seconds())
     exit_quick_battle()
     
     current_seed = get_current_seed(generate_next_team_pair, tsv)
@@ -92,7 +92,7 @@ def advance_according_to_route(
     current_seed: int,
     target: Tuple[int, timedelta],
     tsv: int,
-    opts: Optional[Tuple[int, int]],
+    advances_by_opening_items: Optional[int],
     generate_next_team_pair: Callable[[], TeamPair],
     set_cursor_to_setting: Callable[[], None],
     change_setting: Callable[[], None],
@@ -108,7 +108,7 @@ def advance_according_to_route(
         current_seed (int): 現在のseed
         target (Tuple[int, timedelta]): 目標seedと待機時間のタプル
         tsv (int): TSV
-        opts (Optional[Tuple[int, int]]): ロード後に使用する消費数（ロード時の強制消費数、もちものを開く際の消費数）
+        advances_by_opening_items (Optional[int]): もちものを開く際の消費数
         generate_next_team_pair (Callable[[], TeamPair]): 現在のいますぐバトル生成結果を破棄し、再度生成して渡すコールバック関数
         set_cursor_to_setting (Callable[[], None]): いますぐバトル生成済み画面から、「せってい」にカーソルを合わせるコールバック関数
         change_setting (Callable[[], None]): 「せってい」にカーソルが合った状態から、設定を変更して保存、「せってい」にカーソルを戻すコールバック関数
@@ -119,21 +119,21 @@ def advance_according_to_route(
         watch_steps (Callable[[], None]): メニューが開いている状態から、メニューを閉じ腰振り1回分待機し、メニューを開くコールバック関数
     """
 
-    teams, change_setting_count, write_report_count, open_items_count, watch_steps_count = decide_route(current_seed, target[0], tsv, opts)
+    teams, change_setting_count, write_report_count, open_items_count, watch_steps_count = decide_route(current_seed, target[0], tsv, advances_by_opening_items)
 
     for team_pair in teams:
         # 色回避によって生成ルートが変更される
         # TSVを正しく指定しなかったなど
         if team_pair != generate_next_team_pair():
             conflict_current_seed = get_current_seed(generate_next_team_pair, tsv)
-            advance_according_to_route(conflict_current_seed, target, tsv, opts, generate_next_team_pair)
+            advance_according_to_route(conflict_current_seed, target, tsv, advances_by_opening_items, generate_next_team_pair, set_cursor_to_setting, change_setting, load, write_report, set_cursor_to_items, open_items, watch_steps)
             return
     
     set_cursor_to_setting()
     for i in range(change_setting_count):
         change_setting()
     
-    if opts is None:
+    if advances_by_opening_items is None:
         return
 
     load()

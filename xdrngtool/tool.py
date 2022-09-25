@@ -22,7 +22,7 @@ def execute_operation(
     verifier: Callable[[], bool],
     target_seeds: List[int], 
     tsv: int = DEFAULT_TSV, 
-    opts: Optional[Tuple[int, int]] = None, 
+    advances_by_opening_items: Optional[int] = None, 
 ) -> bool:
     """ポケモンXDの乱数調整を行います。
 
@@ -45,7 +45,7 @@ def execute_operation(
         verifier (Callable[[], bool]): seed調整後に実行し、成否を返すコールバック関数（エンカウント・捕獲・HP素早さ判定・ID生成など...）
         target_seeds (List[int]): 目標seedのリスト
         tsv (int): TSV。指定しない場合、いますぐバトルの生成結果に齟齬が生じ再計算が発生する可能性があります。 Defaults to DEFAULT_TSV.
-        opts (Optional[Tuple[int, int]]): ロード後に使用する消費数（ロード時の強制消費数、もちものを開く際の消費数）。 Defaults to None.
+        advances_by_opening_items (Optional[int]): もちものを開く際の消費数。 Defaults to None.
 
     Returns:
         bool: 試行の成否
@@ -68,9 +68,9 @@ def execute_operation(
     current_seed, target = decide_target(target_seeds, tsv, transition_to_quick_battle, generate_next_team_pair)
     
     try:
-        current_seed = advance_by_moltres(target[1], tsv, generate_next_team_pair, enter_quick_battle, exit_quick_battle)
-        advance_according_to_route(current_seed, target, tsv, opts, generate_next_team_pair, set_cursor_to_setting, change_setting, load, write_report, set_cursor_to_items, open_items, watch_steps)
+        current_seed = advance_by_moltres(target, tsv, generate_next_team_pair, enter_quick_battle, exit_quick_battle)
+        advance_according_to_route(current_seed, target, tsv, advances_by_opening_items, generate_next_team_pair, set_cursor_to_setting, change_setting, load, write_report, set_cursor_to_items, open_items, watch_steps)
     except:
-        return execute_operation(target_seeds, tsv, opts)
+        return execute_operation(operations, verifier, target_seeds, tsv, advances_by_opening_items)
     
     return verifier()
