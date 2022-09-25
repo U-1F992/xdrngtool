@@ -3,7 +3,7 @@ import math
 from typing import Callable, TypeAlias
 
 from xddb import PlayerTeam, EnemyTeam, generate_quick_battle, XDDBClient
-from .lcg import LCG
+from lcg.gc import LCG
 from .constant import *
 
 TeamPair: TypeAlias = tuple[tuple[PlayerTeam, int, int], tuple[EnemyTeam, int, int]]
