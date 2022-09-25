@@ -1,5 +1,5 @@
 [[package]]
-name = "xddb"
+name = "lcg"
 version = "0.1.0"
 description = ""
 category = "main"
@@ -9,14 +9,33 @@ develop = false
 
 [package.source]
 type = "git"
+url = "https://github.com/yatsuna827/LCG.py"
+reference = "main"
+resolved_reference = "2234ba55bf195b7e45e8bdb9fdcbc00082678914"
+
+[[package]]
+name = "xddb"
+version = "0.1.0"
+description = ""
+category = "main"
+optional = false
+python-versions = "^3.7"
+develop = false
+
+[package.dependencies]
+lcg = {git = "https://github.com/yatsuna827/LCG.py", rev = "main"}
+
+[package.source]
+type = "git"
 url = "https://github.com/yatsuna827/xddb"
 reference = "main"
-resolved_reference = "0fea2f0887d02ba3b0be41f1ec2ef9910c4b6d4c"
+resolved_reference = "2468d95875f882693d54079f555c4932ae488e7a"
 
 [metadata]
 lock-version = "1.1"
-python-versions = "^3.10"
-content-hash = "cc0e8e497f847c0b365903762a05f7e52d9a48dc965253baaf478098c832e778"
+python-versions = "^3.7"
+content-hash = "2308fc854d4cd51a2b923889ec0ef8164a18dbfc74cd71eb91d7a47487a53914"
 
 [metadata.files]
+lcg = []
 xddb = []
