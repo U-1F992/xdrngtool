@@ -99,7 +99,7 @@ def decide_route(
                 leftover = sequence[:last_index + 1][-1][1]
                 teams = [item[0] for item in sequence][:last_index + 1]
 
-        change_setting = math.floor(leftover / ADVANCES_BY_CHANGING_SETTING)
+        change_setting = leftover // ADVANCES_BY_CHANGING_SETTING
         
     else:
         
@@ -128,25 +128,25 @@ def decide_route(
         # もちもの消費が偶数である場合、奇数の消費手段はレポートのみになるため
         # - 残り消費数が奇数である場合、レポート回数は奇数である
         # - 残り消費数が偶数である場合、偶数である
-        write_report = math.floor(leftover / ADVANCES_BY_WRITING_REPORT)
+        write_report = leftover // ADVANCES_BY_WRITING_REPORT
         if (is_odd(leftover) and is_even(write_report)) or (is_even(leftover) and is_odd(write_report)):
             write_report = write_report - 1 if write_report != 0 else 0
         leftover -= ADVANCES_BY_WRITING_REPORT * write_report
 
         # 設定変更回数
-        change_setting = math.floor(leftover / 40)
+        change_setting = leftover // 40
         leftover -= ADVANCES_BY_CHANGING_SETTING * change_setting
         
         # もちものを開く回数
         # - 残り消費数が奇数である場合、もちものを開く回数は奇数である
         # - 残り消費数が偶数である場合、偶数である
-        open_items = math.floor(leftover / advances_by_opening_items)
+        open_items = leftover // advances_by_opening_items
         if (is_odd(leftover) and is_even(open_items)) or (is_even(leftover) and is_odd(open_items)):
             open_items = open_items - 1 if open_items != 0 else 0
         leftover -= advances_by_opening_items * open_items
 
         # 腰振り回数
-        watch_steps = math.floor(leftover / ADVANCES_BY_WATCHING_STEPS)
+        watch_steps = leftover // ADVANCES_BY_WATCHING_STEPS
     
     route = (teams, change_setting, write_report, open_items, watch_steps)
     test_route(route, current_seed, target_seed, tsv, advances_by_opening_items) # あまり自信がないのでチェック
