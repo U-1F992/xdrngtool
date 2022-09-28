@@ -21,7 +21,7 @@ def get_wait_time(
     Returns:
         timedelta: 待機時間
     """
-    index = LCG.get_index(seed=current_seed, init_seed=target_seed)
+    index = LCG.get_index(seed=target_seed, init_seed=current_seed)
     sec = index / ADVANCES_PER_SECOND_BY_MOLTRES
     return timedelta(seconds=sec) - LEFTOVER_WAIT_TIME
 
@@ -56,7 +56,7 @@ def decide_route(
     
     CANNOT_REACH_ERROR = Exception(f"No way to reach {target_seed:X} from {current_seed:X}.")
 
-    total_advances = LCG.get_index(seed=current_seed, init_seed=target_seed)
+    total_advances = LCG.get_index(seed=target_seed, init_seed=current_seed)
     lcg = LCG(current_seed)
 
     # 生成結果と残り消費数のペアのリスト
