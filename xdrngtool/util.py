@@ -190,8 +190,8 @@ def decode_quick_battle(raw: Tuple[int, int, int]) -> TeamPair:
     p_team = PlayerTeam(raw_p_team)
     e_team = EnemyTeam(raw_e_team)
     
-    p1_base, p2_base = PLAYER_BASE_HP[raw_p_team]
-    e1_base, e2_base = ENEMY_BASE_HP[raw_e_team]
+    p1_base, p2_base = p_team.base_hp
+    e1_base, e2_base = e_team.base_hp
     # https://github.com/yatsuna827/xddb/blob/dc619a3ec909a44f33ac5bd7df6dcc9e0e807977/src/xddb/client.py#L62
     hp = [
         e1_base + ((raw_hp >> 24) & 0xFF),
