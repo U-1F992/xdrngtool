@@ -134,7 +134,7 @@ def decide_route(
         leftover -= ADVANCES_BY_WRITING_REPORT * write_report
 
         # 設定変更回数
-        change_setting = leftover // 40
+        change_setting = leftover // ADVANCES_BY_CHANGING_SETTING
         leftover -= ADVANCES_BY_CHANGING_SETTING * change_setting
         
         # もちものを開く回数
