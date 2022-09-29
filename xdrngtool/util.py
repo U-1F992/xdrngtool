@@ -21,7 +21,7 @@ def get_wait_time(
     Returns:
         timedelta: 待機時間
     """
-    index = LCG(target_seed).index_from(current_seed)
+    index = LCG.get_index(seed=target_seed, init_seed=current_seed)
     sec = index / ADVANCES_PER_SECOND_BY_MOLTRES
     return timedelta(seconds=sec) - LEFTOVER_WAIT_TIME
 
@@ -56,7 +56,7 @@ def decide_route(
     
     CANNOT_REACH_ERROR = Exception(f"No way to reach {target_seed:X} from {current_seed:X}.")
 
-    total_advances = LCG(target_seed).index_from(current_seed)
+    total_advances = LCG.get_index(seed=target_seed, init_seed=current_seed)
     lcg = LCG(current_seed)
 
     # 生成結果と残り消費数のペアのリスト
@@ -99,7 +99,7 @@ def decide_route(
                 leftover = sequence[:last_index + 1][-1][1]
                 teams = [item[0] for item in sequence][:last_index + 1]
 
-        change_setting = math.floor(leftover / ADVANCES_BY_CHANGING_SETTING)
+        change_setting = leftover // ADVANCES_BY_CHANGING_SETTING
         
     else:
         
@@ -128,25 +128,25 @@ def decide_route(
         # もちもの消費が偶数である場合、奇数の消費手段はレポートのみになるため
         # - 残り消費数が奇数である場合、レポート回数は奇数である
         # - 残り消費数が偶数である場合、偶数である
-        write_report = math.floor(leftover / ADVANCES_BY_WRITING_REPORT)
+        write_report = leftover // ADVANCES_BY_WRITING_REPORT
         if (is_odd(leftover) and is_even(write_report)) or (is_even(leftover) and is_odd(write_report)):
             write_report = write_report - 1 if write_report != 0 else 0
         leftover -= ADVANCES_BY_WRITING_REPORT * write_report
 
         # 設定変更回数
-        change_setting = math.floor(leftover / 40)
+        change_setting = leftover // ADVANCES_BY_CHANGING_SETTING
         leftover -= ADVANCES_BY_CHANGING_SETTING * change_setting
         
         # もちものを開く回数
         # - 残り消費数が奇数である場合、もちものを開く回数は奇数である
         # - 残り消費数が偶数である場合、偶数である
-        open_items = math.floor(leftover / advances_by_opening_items)
+        open_items = leftover // advances_by_opening_items
         if (is_odd(leftover) and is_even(open_items)) or (is_even(leftover) and is_odd(open_items)):
             open_items = open_items - 1 if open_items != 0 else 0
         leftover -= advances_by_opening_items * open_items
 
         # 腰振り回数
-        watch_steps = math.floor(leftover / ADVANCES_BY_WATCHING_STEPS)
+        watch_steps = leftover // ADVANCES_BY_WATCHING_STEPS
     
     route = (teams, change_setting, write_report, open_items, watch_steps)
     test_route(route, current_seed, target_seed, tsv, advances_by_opening_items) # あまり自信がないのでチェック
@@ -190,8 +190,8 @@ def decode_quick_battle(raw: Tuple[int, int, int]) -> TeamPair:
     p_team = PlayerTeam(raw_p_team)
     e_team = EnemyTeam(raw_e_team)
     
-    p1_base, p2_base = PLAYER_BASE_HP[raw_p_team]
-    e1_base, e2_base = ENEMY_BASE_HP[raw_e_team]
+    p1_base, p2_base = p_team.base_hp
+    e1_base, e2_base = e_team.base_hp
     # https://github.com/yatsuna827/xddb/blob/dc619a3ec909a44f33ac5bd7df6dcc9e0e807977/src/xddb/client.py#L62
     hp = [
         e1_base + ((raw_hp >> 24) & 0xFF),
