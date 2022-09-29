@@ -1,5 +1,5 @@
 from datetime import timedelta
-from typing import List, Tuple
+from typing import List
 import unittest
 
 from xdrngtool import *
@@ -81,9 +81,39 @@ class TestUtil(unittest.TestCase):
         ]
         for sequence, tsv, expected in test_case:
             with self.subTest(sequence=sequence, tsv=tsv, expected=f"{expected:X}"):
-                callback = lambda: sequence.pop(0)
-                actual = get_current_seed(callback, tsv)
+                operations = TestOperations(sequence)
+                actual = get_current_seed(operations, tsv)
                 self.assertEqual(expected, actual)
+
+class TestOperations(XDRNGOperations):
+    def __init__(self, sequence: List[TeamPair]) -> None:
+        self.sequence = sequence.copy()
+    def generate_next_team_pair(self) -> TeamPair:
+        return self.sequence.pop()
+    
+    def transition_to_quick_battle(self) -> None:
+        pass
+    def enter_quick_battle(self) -> None:
+        pass 
+    def exit_quick_battle(self) -> None:
+        pass 
+    def set_cursor_to_setting(self) -> None:
+        pass 
+    def change_setting(self) -> None:
+        pass 
+    def load(self) -> None:
+        pass 
+    def write_report(self) -> None:
+        pass 
+    def set_cursor_to_items(self) -> None:
+        pass 
+    def open_items(self) -> None:
+        pass 
+    def watch_steps(self) -> None:
+        pass
+    def verify(self) -> bool:
+        pass
+    
 
 if __name__ == "__main__":
     unittest.main()
