@@ -1,5 +1,5 @@
 from datetime import timedelta
-from typing import List, Optional, Tuple
+from typing import List, Optional, Set, Tuple
 
 from xddb import PlayerTeam, EnemyTeam, generate_quick_battle, XDDBClient
 from lcg.gc import LCG
@@ -38,7 +38,7 @@ def is_suitable_for_waiting(wait_time: timedelta) -> bool:
 def decide_route(
     current_seed: int,
     target_seed: int,
-    tsv: int = DEFAULT_TSV,
+    tsv: Optional[int] = None,
     advances_by_opening_items: Optional[int] = None
 ) -> Tuple[List[TeamPair], int, int, int, int]:
     """消費経路を算出します。
@@ -46,7 +46,7 @@ def decide_route(
     Args:
         current_seed (int): 現在のseed
         target_seed (int): 目標のseed
-        tsv (int, optional): TSV。正確に指定されない場合、実際のいますぐバトルの生成結果および回数は異なる可能性が生じます。 Defaults to DEFAULT_TSV.
+        tsv (int, optional): TSV。正確に指定されない場合、実際のいますぐバトルの生成結果および回数は異なる可能性が生じます。 Defaults to None.
         advances_by_opening_items (Optional[int], optional): もちものを開く際の消費数。 Defaults to None.
 
     Returns:
@@ -155,7 +155,7 @@ def test_route(
     route: Tuple[List[TeamPair], int, int, int, int],
     current_seed: int,
     target_seed: int,
-    tsv: int,
+    tsv: Optional[int],
     advances_by_opening_items: Optional[int]
 ) -> None:
     
@@ -174,7 +174,7 @@ def test_route(
     if test_lcg.seed != target_seed:
         raise Exception(f"Corner case has been found. Please report to the developer: \ncurrent_seed={current_seed:X}\ntarget_seed={target_seed:X}\ntsv={tsv}\nadvances_by_opening_items={advances_by_opening_items}\nresult={(len(teams), change_setting, write_report, open_items, watch_steps)}\nactual={test_lcg.seed:X}")
 
-def decode_quick_battle(raw: Tuple[int, int, int]) -> TeamPair:
+def decode_quick_battle(raw: Tuple[PlayerTeam, EnemyTeam, int, Set[int]]) -> TeamPair:
     """xddbから受け取る生データを、実際の生成結果に変換する
 
     Args:
@@ -184,10 +184,7 @@ def decode_quick_battle(raw: Tuple[int, int, int]) -> TeamPair:
         TeamPair: 実際の生成結果
     """
 
-    raw_p_team, raw_e_team, raw_hp = raw
-
-    p_team = PlayerTeam(raw_p_team)
-    e_team = EnemyTeam(raw_e_team)
+    p_team, e_team, raw_hp, p_team_psvs = raw
     
     p1_base, p2_base = p_team.base_hp
     e1_base, e2_base = e_team.base_hp
@@ -209,14 +206,14 @@ def is_even(value: int) -> bool:
 def is_odd(value: int) -> bool:
     return not is_even(value)
 
-def get_current_seed(operations: XDRNGOperations, tsv: int = DEFAULT_TSV) -> int:
+def get_current_seed(operations: XDRNGOperations, tsv: Optional[int] = None) -> int:
     """現在のseedを取得します。
 
     コールバックの実装については、あらかじめいますぐバトル生成済み画面まで誘導しておき、B,A入力で再生成して画像認識しreturnすることを想定しています。
 
     Args:
         operations (XDRNGOperations): XDRNGOperations抽象クラスを継承したクラスのオブジェクト
-        tsv (int, optional):TSV。正確に指定されない場合、実際のいますぐバトルの生成結果および回数は異なる可能性が生じます。 Defaults to DEFAULT_TSV.
+        tsv (int, optional):TSV。正確に指定されない場合、実際のいますぐバトルの生成結果および回数は異なる可能性が生じます。 Defaults to None.
 
     Raises:
         Exception: コールバックが例外で停止した場合に発生します。誤操作などで回復不能（リセット）に陥った際に利用できます。

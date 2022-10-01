@@ -45,8 +45,8 @@ class TestUtil(unittest.TestCase):
         """ロードする場合
         """
         test_case = [
-            (0xfe645768, 0xff7eafab, DEFAULT_TSV, 13, (728, 0, 7, 0, 0)),
-            (0x88144b1c, 0x143956ec, DEFAULT_TSV, 13, (0, 1, 0, 0, 8)),
+            (0xfe645768, 0xff7eafab, None, 13, (728, 0, 7, 0, 0)),
+            (0x88144b1c, 0x143956ec, None, 13, (0, 1, 0, 0, 8)),
         ]
         for current_seed, target_seed, tsv, advances_by_opening_items, expected in test_case:
             with self.subTest(current_seed=f"{current_seed:X}", target_seed=f"{target_seed:X}", tsv=tsv, advances_by_opening_items=advances_by_opening_items, expected=expected):
@@ -65,7 +65,7 @@ class TestUtil(unittest.TestCase):
                     ((PlayerTeam.Rayquaza, 346, 235), (EnemyTeam.Zapdos, 313, 317)),
                     ((PlayerTeam.Mewtwo, 395, 346), (EnemyTeam.Kangaskhan, 350, 335))
                 ],
-                DEFAULT_TSV, 0x4d8483e7
+                None, 0x4d8483e7
             ),
             # 3回で見つかるもの
             (
@@ -74,7 +74,7 @@ class TestUtil(unittest.TestCase):
                     ((PlayerTeam.Mewtwo, 342, 352), (EnemyTeam.Articuno, 325, 384)),
                     ((PlayerTeam.Mewtwo, 335, 382), (EnemyTeam.Articuno, 331, 361)),
                 ],
-                DEFAULT_TSV, 0xd9202593
+                None, 0xd9202593
             ),
             # 4回（以上）で見つかるもの
             # 途中で見失うもの

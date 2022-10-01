@@ -5,13 +5,12 @@ from typing import List, Optional, Tuple
 from xddb import EnemyTeam
 
 from .abc import XDRNGOperations
-from .constant import DEFAULT_TSV
 from .util import decide_route, get_current_seed, get_wait_time, is_suitable_for_waiting
 
 def execute_operation(
     operations: XDRNGOperations, 
     target_seeds: List[int], 
-    tsv: int = DEFAULT_TSV, 
+    tsv: Optional[int] = None, 
     advances_by_opening_items: Optional[int] = None, 
 ) -> bool:
     """ポケモンXDの乱数調整を行います。
@@ -19,7 +18,7 @@ def execute_operation(
     Args:
         operations (XDRNGOperations): XDRNGOperations抽象クラスを継承したクラスのオブジェクト
         target_seeds (List[int]): 目標seedのリスト
-        tsv (int): TSV。指定しない場合、いますぐバトルの生成結果に齟齬が生じ再計算が発生する可能性があります。 Defaults to DEFAULT_TSV.
+        tsv (int): TSV。指定しない場合、いますぐバトルの生成結果に齟齬が生じ再計算が発生する可能性があります。 Defaults to None.
         advances_by_opening_items (Optional[int]): もちものを開く際の消費数。 Defaults to None.
 
     Returns:
@@ -39,7 +38,7 @@ def execute_operation(
 def decide_target(
     operations: XDRNGOperations,
     target_seeds: List[int], 
-    tsv: int, 
+    tsv: Optional[int], 
 ) -> Tuple[int, Tuple[int, timedelta]]:
     """初期seed厳選を行い、目標seedを決定します。
 
@@ -73,7 +72,7 @@ def decide_target(
 def advance_by_moltres(
     operations: XDRNGOperations,
     target: Tuple[int, timedelta],
-    tsv: int,
+    tsv: Optional[int],
 ) -> int:
     """いますぐバトルにファイヤーを出し、大量消費します。
 
@@ -116,7 +115,7 @@ def advance_according_to_route(
     operations: XDRNGOperations,
     current_seed: int,
     target: Tuple[int, timedelta],
-    tsv: int,
+    tsv: Optional[int],
     advances_by_opening_items: Optional[int],
 ) -> None:
     """経路に従って消費します。
