@@ -1,11 +1,12 @@
 from datetime import timedelta
-from typing import List, Optional, Set, Tuple
+from typing import List, Optional, Set, Tuple, Union
 
 from xddb import PlayerTeam, EnemyTeam, generate_quick_battle, XDDBClient
 from lcg.gc import LCG
 
 from .abc import TeamPair, XDRNGOperations
 from .constant import *
+from .helper import _generate_quick_battle
 
 def get_wait_time(
     current_seed: int,
@@ -62,7 +63,7 @@ def decide_route(
     sequence: List[Tuple[TeamPair, int]] = []
     
     while lcg.index_from(current_seed) <= total_advances:
-        team_pair = decode_quick_battle(generate_quick_battle(lcg, tsv))
+        team_pair, psvs = decode_quick_battle(_generate_quick_battle(lcg, tsv))
         leftover = total_advances - lcg.index_from(current_seed)
         sequence.append((team_pair, leftover))
     sequence.pop()
@@ -174,17 +175,23 @@ def test_route(
     if test_lcg.seed != target_seed:
         raise Exception(f"Corner case has been found. Please report to the developer: \ncurrent_seed={current_seed:X}\ntarget_seed={target_seed:X}\ntsv={tsv}\nadvances_by_opening_items={advances_by_opening_items}\nresult={(len(teams), change_setting, write_report, open_items, watch_steps)}\nactual={test_lcg.seed:X}")
 
-def decode_quick_battle(raw: Tuple[PlayerTeam, EnemyTeam, int, Set[int]]) -> TeamPair:
+def decode_quick_battle(raw: Union[Tuple[PlayerTeam, EnemyTeam, int], Tuple[PlayerTeam, EnemyTeam, int, Set[int]]]) -> Tuple[TeamPair, Set[int]]:
     """xddbから受け取る生データを、実際の生成結果に変換する
 
     Args:
-        raw (Tuple[int, int, int]): generate_quick_battleの結果
+        raw (Union[Tuple[PlayerTeam, EnemyTeam, int], Tuple[PlayerTeam, EnemyTeam, int, Set[int]]]): generate_quick_battleの結果
 
     Returns:
         TeamPair: 実際の生成結果
     """
 
-    p_team, e_team, raw_hp, p_team_psvs = raw
+    if len(raw) == 3:
+        p_team, e_team, raw_hp = raw
+        p_team_psvs: Set[int] = set()
+    elif len(raw) == 4:
+        p_team, e_team, raw_hp, p_team_psvs = raw
+    else:
+        raise Exception("Invalid argument.")
     
     p1_base, p2_base = p_team.base_hp
     e1_base, e2_base = e_team.base_hp
@@ -199,7 +206,7 @@ def decode_quick_battle(raw: Tuple[PlayerTeam, EnemyTeam, int, Set[int]]) -> Tea
     p = (p_team, hp[2], hp[3])
     e = (e_team, hp[0], hp[1])
     
-    return (p, e)
+    return ((p, e), p_team_psvs)
 
 def is_even(value: int) -> bool:
     return value % 2 == 0
@@ -253,8 +260,7 @@ def get_current_seed(operations: XDRNGOperations, tsv: Optional[int] = None) -> 
             third = operations.generate_next_team_pair()
             for seed in search_result:
                 lcg = LCG(seed)
-                raw = generate_quick_battle(lcg, tsv)
-                generate_result = decode_quick_battle(raw)
+                generate_result, psvs = decode_quick_battle(_generate_quick_battle(lcg, tsv))
                 
                 if generate_result == third:
                     next.add(lcg.seed)
