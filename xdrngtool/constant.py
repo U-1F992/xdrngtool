@@ -1,8 +1,5 @@
 from datetime import timedelta
 
-# 指定されない場合に使用するTSV
-DEFAULT_TSV = 0x10000
-
 # 最短の待機時間
 # 戦闘にファイヤーが登場するまで、および降参してから消費が止まるまでにはラグがあるため、短すぎると制御が難しいです。
 MINIMUM_WAIT_TIME = timedelta(minutes=1)
