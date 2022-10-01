@@ -89,7 +89,7 @@ class TestOperations(XDRNGOperations):
     def __init__(self, sequence: List[TeamPair]) -> None:
         self.sequence = sequence.copy()
     def generate_next_team_pair(self) -> TeamPair:
-        return self.sequence.pop()
+        return self.sequence.pop(0)
     
     def transition_to_quick_battle(self) -> None:
         pass
