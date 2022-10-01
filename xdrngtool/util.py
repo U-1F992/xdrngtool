@@ -1,12 +1,11 @@
 from datetime import timedelta
-import math
-from typing import Callable, List, Optional, Tuple
+from typing import List, Optional, Tuple
 
 from xddb import PlayerTeam, EnemyTeam, generate_quick_battle, XDDBClient
 from lcg.gc import LCG
-from .constant import *
 
-TeamPair = Tuple[Tuple[PlayerTeam, int, int], Tuple[EnemyTeam, int, int]]
+from .abc import TeamPair, XDRNGOperations
+from .constant import *
 
 def get_wait_time(
     current_seed: int,
@@ -210,13 +209,13 @@ def is_even(value: int) -> bool:
 def is_odd(value: int) -> bool:
     return not is_even(value)
 
-def get_current_seed(generate_next_team_pair: Callable[[], TeamPair], tsv: int = DEFAULT_TSV) -> int:
+def get_current_seed(operations: XDRNGOperations, tsv: int = DEFAULT_TSV) -> int:
     """現在のseedを取得します。
 
     コールバックの実装については、あらかじめいますぐバトル生成済み画面まで誘導しておき、B,A入力で再生成して画像認識しreturnすることを想定しています。
 
     Args:
-        generate_next_team_pair (Callable[[], TeamPair]): いますぐバトルの生成結果を返すコールバック。
+        operations (XDRNGOperations): XDRNGOperations抽象クラスを継承したクラスのオブジェクト
         tsv (int, optional):TSV。正確に指定されない場合、実際のいますぐバトルの生成結果および回数は異なる可能性が生じます。 Defaults to DEFAULT_TSV.
 
     Raises:
@@ -229,8 +228,8 @@ def get_current_seed(generate_next_team_pair: Callable[[], TeamPair], tsv: int =
     client = XDDBClient()
     
     try:
-        first = generate_next_team_pair()
-        second = generate_next_team_pair()
+        first = operations.generate_next_team_pair()
+        second = operations.generate_next_team_pair()
     except:
         raise
 
@@ -245,7 +244,7 @@ def get_current_seed(generate_next_team_pair: Callable[[], TeamPair], tsv: int =
         # 検索結果が0件の場合
         # 2回取得からやり直す
         try:
-            return get_current_seed(generate_next_team_pair, tsv)
+            return get_current_seed(operations, tsv)
         except:
             raise
     
@@ -254,7 +253,7 @@ def get_current_seed(generate_next_team_pair: Callable[[], TeamPair], tsv: int =
         # それぞれのseedからパーティ生成し、実際の生成結果と比較する
         next: set[int] = set()
         while True:
-            third = generate_next_team_pair()
+            third = operations.generate_next_team_pair()
             for seed in search_result:
                 lcg = LCG(seed)
                 raw = generate_quick_battle(lcg, tsv)
@@ -275,7 +274,7 @@ def get_current_seed(generate_next_team_pair: Callable[[], TeamPair], tsv: int =
             # 0件になった場合
             # 2回取得からやり直す
             try:
-                return get_current_seed(generate_next_team_pair, tsv)
+                return get_current_seed(operations, tsv)
             except:
                 raise
         
