@@ -175,7 +175,7 @@ def test_route(
     if test_lcg.seed != target_seed:
         raise Exception(f"Corner case has been found. Please report to the developer: \ncurrent_seed={current_seed:X}\ntarget_seed={target_seed:X}\ntsv={tsv}\nadvances_by_opening_items={advances_by_opening_items}\nresult={(len(teams), change_setting, write_report, open_items, watch_steps)}\nactual={test_lcg.seed:X}")
 
-def decode_quick_battle(raw: Union[Tuple[PlayerTeam, EnemyTeam, int], Tuple[PlayerTeam, EnemyTeam, int, Set[int]]]) -> Tuple[TeamPair, Set[int]]:
+def decode_quick_battle(raw: Tuple[PlayerTeam, EnemyTeam, int, Set[int]]) -> Tuple[TeamPair, Set[int]]:
     """xddbから受け取る生データを、実際の生成結果に変換する
 
     Args:
@@ -185,13 +185,7 @@ def decode_quick_battle(raw: Union[Tuple[PlayerTeam, EnemyTeam, int], Tuple[Play
         TeamPair: 実際の生成結果
     """
 
-    if len(raw) == 3:
-        p_team, e_team, raw_hp = raw
-        p_team_psvs: Set[int] = set()
-    elif len(raw) == 4:
-        p_team, e_team, raw_hp, p_team_psvs = raw
-    else:
-        raise Exception("Invalid argument.")
+    p_team, e_team, raw_hp, p_team_psvs = raw
     
     p1_base, p2_base = p_team.base_hp
     e1_base, e2_base = e_team.base_hp
