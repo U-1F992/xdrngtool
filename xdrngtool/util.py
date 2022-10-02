@@ -1,7 +1,7 @@
 from datetime import timedelta
-from typing import List, Optional, Set, Tuple, Union
+from typing import List, Optional, Set, Tuple
 
-from xddb import PlayerTeam, EnemyTeam, generate_quick_battle, XDDBClient
+from xddb import PlayerTeam, EnemyTeam, XDDBClient
 from lcg.gc import LCG
 
 from .abc import TeamPair, XDRNGOperations
@@ -165,7 +165,7 @@ def test_route(
 
     test_lcg = LCG(current_seed)
     for i in teams:
-        generate_quick_battle(test_lcg, tsv)
+        _generate_quick_battle(test_lcg, tsv)
     test_lcg.adv(change_setting * ADVANCES_BY_CHANGING_SETTING)
     test_lcg.adv(advances_by_loading)
     test_lcg.adv(write_report * ADVANCES_BY_WRITING_REPORT)

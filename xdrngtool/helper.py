@@ -1,4 +1,4 @@
-from typing import Optional, Set
+from typing import Optional
 
 from lcg.gc import LCG
 from xddb import generate_quick_battle
