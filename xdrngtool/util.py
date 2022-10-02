@@ -41,7 +41,7 @@ def decide_route(
     target_seed: int,
     tsv: Optional[int] = None,
     advances_by_opening_items: Optional[int] = None
-) -> Tuple[List[TeamPair], int, int, int, int]:
+) -> Tuple[List[Tuple[TeamPair, int, Set[int]]], int, int, int, int]:
     """消費経路を算出します。
 
     Args:
@@ -51,7 +51,8 @@ def decide_route(
         advances_by_opening_items (Optional[int], optional): もちものを開く際の消費数。 Defaults to None.
 
     Returns:
-        Tuple[List[TeamPair], int, int, int, int]: 消費経路（いますぐバトルの生成リスト、設定変更回数、レポート回数、もちものを開く回数、腰振りを見る回数）
+        Tuple[List[Tuple[TeamPair, int, Set[int]]], int, int, int, int]: 消費経路\n
+        （いますぐバトルの生成、生成前のseed、P1側手持ちのpsv）のタプルのリスト、設定変更回数、レポート回数、もちものを開く回数、腰振りを見る回数
     """
     
     CANNOT_REACH_ERROR = Exception(f"No way to reach {target_seed:X} from {current_seed:X}.")
@@ -63,12 +64,12 @@ def decide_route(
     sequence: List[Tuple[TeamPair, int]] = []
     
     while lcg.index_from(current_seed) <= total_advances:
-        team_pair, psvs = decode_quick_battle(_generate_quick_battle(lcg, tsv))
+        team_pair, _ = decode_quick_battle(_generate_quick_battle(lcg, tsv))
         leftover = total_advances - lcg.index_from(current_seed)
         sequence.append((team_pair, leftover))
     sequence.pop()
 
-    teams: List[TeamPair] = []
+    _teams: List[TeamPair] = []
     change_setting: int = 0
     write_report: int = 0
     open_items: int = 0
@@ -94,10 +95,10 @@ def decide_route(
 
             if last_index == 0:
                 leftover = sequence[0][1]
-                teams = [item[0] for item in sequence]
+                _teams = [item[0] for item in sequence]
             else:
                 leftover = sequence[:last_index + 1][-1][1]
-                teams = [item[0] for item in sequence][:last_index + 1]
+                _teams = [item[0] for item in sequence][:last_index + 1]
 
         change_setting = leftover // ADVANCES_BY_CHANGING_SETTING
         
@@ -122,7 +123,7 @@ def decide_route(
             except IndexError:
                 raise CANNOT_REACH_ERROR
             leftover = sequence[-1][1] - advances_by_loading
-        teams = [item[0] for item in sequence]
+        _teams = [item[0] for item in sequence]
 
         # レポート回数
         # もちもの消費が偶数である場合、奇数の消費手段はレポートのみになるため
@@ -148,12 +149,21 @@ def decide_route(
         # 腰振り回数
         watch_steps = leftover // ADVANCES_BY_WATCHING_STEPS
     
+    # _teamsを詰め替える
+    # 生成結果、生成"前"のseed、psv
+    teams: List[Tuple[TeamPair, int, Set[int]]] = []
+    _lcg = LCG(current_seed)
+    for _ in _teams:
+        seed_before = _lcg.seed
+        team, psvs = decode_quick_battle(_generate_quick_battle(_lcg, tsv))
+        teams.append((team, seed_before, psvs))
+
     route = (teams, change_setting, write_report, open_items, watch_steps)
     test_route(route, current_seed, target_seed, tsv, advances_by_opening_items) # あまり自信がないのでチェック
     return route
 
 def test_route(
-    route: Tuple[List[TeamPair], int, int, int, int],
+    route: Tuple[List[Tuple[TeamPair, int, Set[int]]], int, int, int, int],
     current_seed: int,
     target_seed: int,
     tsv: Optional[int],
