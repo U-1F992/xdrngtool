@@ -1,11 +1,12 @@
 from datetime import timedelta
-from typing import List, Optional, Tuple
+from typing import List, Optional, Set, Tuple
 
-from xddb import PlayerTeam, EnemyTeam, generate_quick_battle, XDDBClient
+from xddb import PlayerTeam, EnemyTeam, XDDBClient
 from lcg.gc import LCG
 
 from .abc import TeamPair, XDRNGOperations
 from .constant import *
+from .helper import _generate_quick_battle
 
 def get_wait_time(
     current_seed: int,
@@ -38,19 +39,20 @@ def is_suitable_for_waiting(wait_time: timedelta) -> bool:
 def decide_route(
     current_seed: int,
     target_seed: int,
-    tsv: int = DEFAULT_TSV,
+    tsv: Optional[int] = None,
     advances_by_opening_items: Optional[int] = None
-) -> Tuple[List[TeamPair], int, int, int, int]:
+) -> Tuple[List[Tuple[TeamPair, int, Set[int]]], int, int, int, int]:
     """消費経路を算出します。
 
     Args:
         current_seed (int): 現在のseed
         target_seed (int): 目標のseed
-        tsv (int, optional): TSV。正確に指定されない場合、実際のいますぐバトルの生成結果および回数は異なる可能性が生じます。 Defaults to DEFAULT_TSV.
+        tsv (int, optional): TSV。正確に指定されない場合、実際のいますぐバトルの生成結果および回数は異なる可能性が生じます。 Defaults to None.
         advances_by_opening_items (Optional[int], optional): もちものを開く際の消費数。 Defaults to None.
 
     Returns:
-        Tuple[List[TeamPair], int, int, int, int]: 消費経路（いますぐバトルの生成リスト、設定変更回数、レポート回数、もちものを開く回数、腰振りを見る回数）
+        Tuple[List[Tuple[TeamPair, int, Set[int]]], int, int, int, int]: 消費経路\n
+        （いますぐバトルの生成、生成前のseed、P1側手持ちのpsv）のタプルのリスト、設定変更回数、レポート回数、もちものを開く回数、腰振りを見る回数
     """
     
     CANNOT_REACH_ERROR = Exception(f"No way to reach {target_seed:X} from {current_seed:X}.")
@@ -62,12 +64,12 @@ def decide_route(
     sequence: List[Tuple[TeamPair, int]] = []
     
     while lcg.index_from(current_seed) <= total_advances:
-        team_pair = decode_quick_battle(generate_quick_battle(lcg, tsv))
+        team_pair, _ = decode_quick_battle(_generate_quick_battle(lcg, tsv))
         leftover = total_advances - lcg.index_from(current_seed)
         sequence.append((team_pair, leftover))
     sequence.pop()
 
-    teams: List[TeamPair] = []
+    _teams: List[TeamPair] = []
     change_setting: int = 0
     write_report: int = 0
     open_items: int = 0
@@ -93,10 +95,10 @@ def decide_route(
 
             if last_index == 0:
                 leftover = sequence[0][1]
-                teams = [item[0] for item in sequence]
+                _teams = [item[0] for item in sequence]
             else:
                 leftover = sequence[:last_index + 1][-1][1]
-                teams = [item[0] for item in sequence][:last_index + 1]
+                _teams = [item[0] for item in sequence][:last_index + 1]
 
         change_setting = leftover // ADVANCES_BY_CHANGING_SETTING
         
@@ -121,7 +123,7 @@ def decide_route(
             except IndexError:
                 raise CANNOT_REACH_ERROR
             leftover = sequence[-1][1] - advances_by_loading
-        teams = [item[0] for item in sequence]
+        _teams = [item[0] for item in sequence]
 
         # レポート回数
         # もちもの消費が偶数である場合、奇数の消費手段はレポートのみになるため
@@ -147,15 +149,24 @@ def decide_route(
         # 腰振り回数
         watch_steps = leftover // ADVANCES_BY_WATCHING_STEPS
     
+    # _teamsを詰め替える
+    # 生成結果、生成"前"のseed、psv
+    teams: List[Tuple[TeamPair, int, Set[int]]] = []
+    _lcg = LCG(current_seed)
+    for _ in _teams:
+        seed_before = _lcg.seed
+        team, psvs = decode_quick_battle(_generate_quick_battle(_lcg, tsv))
+        teams.append((team, seed_before, psvs))
+
     route = (teams, change_setting, write_report, open_items, watch_steps)
     test_route(route, current_seed, target_seed, tsv, advances_by_opening_items) # あまり自信がないのでチェック
     return route
 
 def test_route(
-    route: Tuple[List[TeamPair], int, int, int, int],
+    route: Tuple[List[Tuple[TeamPair, int, Set[int]]], int, int, int, int],
     current_seed: int,
     target_seed: int,
-    tsv: int,
+    tsv: Optional[int],
     advances_by_opening_items: Optional[int]
 ) -> None:
     
@@ -164,7 +175,7 @@ def test_route(
 
     test_lcg = LCG(current_seed)
     for i in teams:
-        generate_quick_battle(test_lcg, tsv)
+        _generate_quick_battle(test_lcg, tsv)
     test_lcg.adv(change_setting * ADVANCES_BY_CHANGING_SETTING)
     test_lcg.adv(advances_by_loading)
     test_lcg.adv(write_report * ADVANCES_BY_WRITING_REPORT)
@@ -174,20 +185,17 @@ def test_route(
     if test_lcg.seed != target_seed:
         raise Exception(f"Corner case has been found. Please report to the developer: \ncurrent_seed={current_seed:X}\ntarget_seed={target_seed:X}\ntsv={tsv}\nadvances_by_opening_items={advances_by_opening_items}\nresult={(len(teams), change_setting, write_report, open_items, watch_steps)}\nactual={test_lcg.seed:X}")
 
-def decode_quick_battle(raw: Tuple[int, int, int]) -> TeamPair:
+def decode_quick_battle(raw: Tuple[PlayerTeam, EnemyTeam, int, Set[int]]) -> Tuple[TeamPair, Set[int]]:
     """xddbから受け取る生データを、実際の生成結果に変換する
 
     Args:
-        raw (Tuple[int, int, int]): generate_quick_battleの結果
+        raw (Union[Tuple[PlayerTeam, EnemyTeam, int], Tuple[PlayerTeam, EnemyTeam, int, Set[int]]]): generate_quick_battleの結果
 
     Returns:
         TeamPair: 実際の生成結果
     """
 
-    raw_p_team, raw_e_team, raw_hp = raw
-
-    p_team = PlayerTeam(raw_p_team)
-    e_team = EnemyTeam(raw_e_team)
+    p_team, e_team, raw_hp, p_team_psvs = raw
     
     p1_base, p2_base = p_team.base_hp
     e1_base, e2_base = e_team.base_hp
@@ -202,21 +210,21 @@ def decode_quick_battle(raw: Tuple[int, int, int]) -> TeamPair:
     p = (p_team, hp[2], hp[3])
     e = (e_team, hp[0], hp[1])
     
-    return (p, e)
+    return ((p, e), p_team_psvs)
 
 def is_even(value: int) -> bool:
     return value % 2 == 0
 def is_odd(value: int) -> bool:
     return not is_even(value)
 
-def get_current_seed(operations: XDRNGOperations, tsv: int = DEFAULT_TSV) -> int:
+def get_current_seed(operations: XDRNGOperations, tsv: Optional[int] = None) -> int:
     """現在のseedを取得します。
 
     コールバックの実装については、あらかじめいますぐバトル生成済み画面まで誘導しておき、B,A入力で再生成して画像認識しreturnすることを想定しています。
 
     Args:
         operations (XDRNGOperations): XDRNGOperations抽象クラスを継承したクラスのオブジェクト
-        tsv (int, optional):TSV。正確に指定されない場合、実際のいますぐバトルの生成結果および回数は異なる可能性が生じます。 Defaults to DEFAULT_TSV.
+        tsv (int, optional):TSV。正確に指定されない場合、実際のいますぐバトルの生成結果および回数は異なる可能性が生じます。 Defaults to None.
 
     Raises:
         Exception: コールバックが例外で停止した場合に発生します。誤操作などで回復不能（リセット）に陥った際に利用できます。
@@ -256,8 +264,7 @@ def get_current_seed(operations: XDRNGOperations, tsv: int = DEFAULT_TSV) -> int
             third = operations.generate_next_team_pair()
             for seed in search_result:
                 lcg = LCG(seed)
-                raw = generate_quick_battle(lcg, tsv)
-                generate_result = decode_quick_battle(raw)
+                generate_result, psvs = decode_quick_battle(_generate_quick_battle(lcg, tsv))
                 
                 if generate_result == third:
                     next.add(lcg.seed)

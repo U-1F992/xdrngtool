@@ -3,15 +3,17 @@ from time import sleep
 from typing import List, Optional, Tuple
 
 from xddb import EnemyTeam
+from lcg.gc import LCG
+
+from xdrngtool.helper import _generate_quick_battle
 
 from .abc import XDRNGOperations
-from .constant import DEFAULT_TSV
-from .util import decide_route, get_current_seed, get_wait_time, is_suitable_for_waiting
+from .util import decide_route, decode_quick_battle, get_current_seed, get_wait_time, is_suitable_for_waiting
 
 def execute_operation(
     operations: XDRNGOperations, 
     target_seeds: List[int], 
-    tsv: int = DEFAULT_TSV, 
+    tsv: Optional[int] = None, 
     advances_by_opening_items: Optional[int] = None, 
 ) -> bool:
     """ポケモンXDの乱数調整を行います。
@@ -19,7 +21,7 @@ def execute_operation(
     Args:
         operations (XDRNGOperations): XDRNGOperations抽象クラスを継承したクラスのオブジェクト
         target_seeds (List[int]): 目標seedのリスト
-        tsv (int): TSV。指定しない場合、いますぐバトルの生成結果に齟齬が生じ再計算が発生する可能性があります。 Defaults to DEFAULT_TSV.
+        tsv (int): TSV。指定しない場合、いますぐバトルの生成結果に齟齬が生じ再計算が発生する可能性があります。 Defaults to None.
         advances_by_opening_items (Optional[int]): もちものを開く際の消費数。 Defaults to None.
 
     Returns:
@@ -39,7 +41,7 @@ def execute_operation(
 def decide_target(
     operations: XDRNGOperations,
     target_seeds: List[int], 
-    tsv: int, 
+    tsv: Optional[int], 
 ) -> Tuple[int, Tuple[int, timedelta]]:
     """初期seed厳選を行い、目標seedを決定します。
 
@@ -73,7 +75,7 @@ def decide_target(
 def advance_by_moltres(
     operations: XDRNGOperations,
     target: Tuple[int, timedelta],
-    tsv: int,
+    tsv: Optional[int],
 ) -> int:
     """いますぐバトルにファイヤーを出し、大量消費します。
 
@@ -116,10 +118,10 @@ def advance_according_to_route(
     operations: XDRNGOperations,
     current_seed: int,
     target: Tuple[int, timedelta],
-    tsv: int,
+    tsv: Optional[int],
     advances_by_opening_items: Optional[int],
 ) -> None:
-    """経路に従って消費します。
+    """経路を導出し、それに従って消費します。
 
     Args:
         operations (XDRNGOperations): XDRNGOperations抽象クラスを継承したクラスのオブジェクト
@@ -131,10 +133,24 @@ def advance_according_to_route(
 
     teams, change_setting_count, write_report_count, open_items_count, watch_steps_count = decide_route(current_seed, target[0], tsv, advances_by_opening_items)
 
-    for team_pair in teams:
-        # 色回避によって生成ルートが変更される
-        # TSVを正しく指定しなかったなど
-        if team_pair != operations.generate_next_team_pair():
+    for team_seed_psvs in teams:
+        
+        team_expected, seed_before, psvs = team_seed_psvs
+        team_generated = operations.generate_next_team_pair()
+
+        # 生成結果と予測が異なる場合、色回避によって生成ルートが変更される（TSVを指定しなかった、指定したTSVが誤っていたなど）
+        # - psvをtsvに設定して一致するものがあれば、そこから復帰
+        # - psvのいずれをtsvに設定しても一致するものがなければ、現在seedを再特定して復帰
+        
+        if team_generated != team_expected:
+
+            for tsv_suggested in psvs:
+                _lcg = LCG(seed_before)
+                team_suggested, _ = decode_quick_battle(_generate_quick_battle(_lcg, tsv_suggested))
+                if team_generated == team_suggested:
+                    advance_according_to_route(operations, _lcg.seed, target, tsv, advances_by_opening_items)
+                    return
+
             conflict_current_seed = get_current_seed(operations, tsv)
             advance_according_to_route(operations, conflict_current_seed, target, tsv, advances_by_opening_items)
             return
