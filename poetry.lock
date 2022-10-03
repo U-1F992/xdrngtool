@@ -29,7 +29,7 @@ lcg = {git = "https://github.com/yatsuna827/LCG.py", rev = "main"}
 type = "git"
 url = "https://github.com/yatsuna827/xddb"
 reference = "main"
-resolved_reference = "2468d95875f882693d54079f555c4932ae488e7a"
+resolved_reference = "d658d3b3c0f9354b0eb44132d4d915ec4f612ae0"
 
 [metadata]
 lock-version = "1.1"

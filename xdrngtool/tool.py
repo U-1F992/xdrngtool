@@ -2,10 +2,8 @@ from datetime import timedelta
 from time import sleep
 from typing import List, Optional, Tuple
 
-from xddb import EnemyTeam
+from xddb import EnemyTeam, generate_quick_battle
 from lcg.gc import LCG
-
-from xdrngtool.helper import _generate_quick_battle
 
 from .abc import XDRNGOperations
 from .util import decide_route, decode_quick_battle, get_current_seed, get_wait_time, is_suitable_for_waiting
@@ -146,7 +144,7 @@ def advance_according_to_route(
 
             for tsv_suggested in psvs:
                 _lcg = LCG(seed_before)
-                team_suggested, _ = decode_quick_battle(_generate_quick_battle(_lcg, tsv_suggested))
+                team_suggested, _ = decode_quick_battle(generate_quick_battle(_lcg, tsv_suggested))
                 if team_generated == team_suggested:
                     advance_according_to_route(operations, _lcg.seed, target, tsv, advances_by_opening_items)
                     return

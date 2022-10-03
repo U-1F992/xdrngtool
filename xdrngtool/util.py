@@ -1,12 +1,11 @@
 from datetime import timedelta
 from typing import List, Optional, Set, Tuple
 
-from xddb import PlayerTeam, EnemyTeam, XDDBClient
+from xddb import PlayerTeam, EnemyTeam, XDDBClient, generate_quick_battle
 from lcg.gc import LCG
 
 from .abc import TeamPair, XDRNGOperations
 from .constant import *
-from .helper import _generate_quick_battle
 
 def get_wait_time(
     current_seed: int,
@@ -64,7 +63,7 @@ def decide_route(
     sequence: List[Tuple[TeamPair, int]] = []
     
     while lcg.index_from(current_seed) <= total_advances:
-        team_pair, _ = decode_quick_battle(_generate_quick_battle(lcg, tsv))
+        team_pair, _ = decode_quick_battle(generate_quick_battle(lcg, tsv))
         leftover = total_advances - lcg.index_from(current_seed)
         sequence.append((team_pair, leftover))
     sequence.pop()
@@ -155,7 +154,7 @@ def decide_route(
     _lcg = LCG(current_seed)
     for _ in _teams:
         seed_before = _lcg.seed
-        team, psvs = decode_quick_battle(_generate_quick_battle(_lcg, tsv))
+        team, psvs = decode_quick_battle(generate_quick_battle(_lcg, tsv))
         teams.append((team, seed_before, psvs))
 
     route = (teams, change_setting, write_report, open_items, watch_steps)
@@ -175,7 +174,7 @@ def test_route(
 
     test_lcg = LCG(current_seed)
     for i in teams:
-        _generate_quick_battle(test_lcg, tsv)
+        generate_quick_battle(test_lcg, tsv)
     test_lcg.adv(change_setting * ADVANCES_BY_CHANGING_SETTING)
     test_lcg.adv(advances_by_loading)
     test_lcg.adv(write_report * ADVANCES_BY_WRITING_REPORT)
@@ -264,7 +263,7 @@ def get_current_seed(operations: XDRNGOperations, tsv: Optional[int] = None) -> 
             third = operations.generate_next_team_pair()
             for seed in search_result:
                 lcg = LCG(seed)
-                generate_result, psvs = decode_quick_battle(_generate_quick_battle(lcg, tsv))
+                generate_result, psvs = decode_quick_battle(generate_quick_battle(lcg, tsv))
                 
                 if generate_result == third:
                     next.add(lcg.seed)
