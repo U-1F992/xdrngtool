@@ -1,7 +1,7 @@
 from datetime import timedelta
 from typing import List, Optional, Set, Tuple
 
-from xddb import PlayerTeam, EnemyTeam, XDDBClient, generate_quick_battle
+from xddb import PlayerTeam, EnemyTeam, QuickBattleSeedSearcher, XDDBClient, generate_quick_battle
 from lcg.gc import LCG
 
 from .abc import TeamPair, XDRNGOperations
@@ -233,55 +233,18 @@ def get_current_seed(operations: XDRNGOperations, tsv: Optional[int] = None) -> 
     """
     
     client = XDDBClient()
+    searcher = QuickBattleSeedSearcher(client) if tsv is None else QuickBattleSeedSearcher(client, tsv)
     
     try:
-        first = operations.generate_next_team_pair()
-        second = operations.generate_next_team_pair()
+        while True:
+            generated = operations.generate_next_team_pair()
+            seeds = searcher.next(generated[0], generated[1])
+            
+            if seeds is None or len(seeds) > 1:
+                continue
+            elif len(seeds) == 0:
+                searcher.reset()
+            else:
+                return seeds[0]
     except:
         raise
-
-    search_result = client.search(first[0], first[1], second[0], second[1])
-    length = len(search_result)
-
-    if length == 1:
-        # 検索結果が1件の場合
-        return search_result.pop()
-
-    elif length == 0:
-        # 検索結果が0件の場合
-        # 2回取得からやり直す
-        try:
-            return get_current_seed(operations, tsv)
-        except:
-            raise
-    
-    else:
-        # 検索結果が2件以上の場合
-        # それぞれのseedからパーティ生成し、実際の生成結果と比較する
-        next: set[int] = set()
-        while True:
-            third = operations.generate_next_team_pair()
-            for seed in search_result:
-                lcg = LCG(seed)
-                generate_result, psvs = decode_quick_battle(generate_quick_battle(lcg, tsv))
-                
-                if generate_result == third:
-                    next.add(lcg.seed)
-            
-            if len(next) > 1:
-                # それぞれから生成して、一致するものが複数件あった場合
-                # 生成先seedからさらに生成して比較する
-                search_result = next.copy()
-                next.clear()
-            else:
-                break;    
-        
-        if len(next) == 0:
-            # 0件になった場合
-            # 2回取得からやり直す
-            try:
-                return get_current_seed(operations, tsv)
-            except:
-                raise
-        
-        return next.pop()
