@@ -218,9 +218,7 @@ def is_odd(value: int) -> bool:
 
 def get_current_seed(operations: XDRNGOperations, tsv: Optional[int] = None) -> int:
     """現在のseedを取得します。
-
-    コールバックの実装については、あらかじめいますぐバトル生成済み画面まで誘導しておき、B,A入力で再生成して画像認識しreturnすることを想定しています。
-
+    
     Args:
         operations (XDRNGOperations): XDRNGOperations抽象クラスを継承したクラスのオブジェクト
         tsv (int, optional):TSV。正確に指定されない場合、実際のいますぐバトルの生成結果および回数は異なる可能性が生じます。 Defaults to None.
@@ -235,16 +233,19 @@ def get_current_seed(operations: XDRNGOperations, tsv: Optional[int] = None) -> 
     client = XDDBClient()
     searcher = QuickBattleSeedSearcher(client) if tsv is None else QuickBattleSeedSearcher(client, tsv)
     
-    try:
-        while True:
+    while True:
+        try:
             generated = operations.generate_next_team_pair()
-            seeds = searcher.next(generated[0], generated[1])
-            
-            if seeds is None or len(seeds) > 1:
-                continue
-            elif len(seeds) == 0:
-                searcher.reset()
-            else:
-                return seeds[0]
-    except:
-        raise
+        except:
+            raise
+        seeds = searcher.next(*generated)
+        
+        if seeds is None or len(seeds) > 1:
+            # None: 足りない
+            # len(seeds) > 1: 絞れていない
+            continue
+        elif len(seeds) == 0:
+            # len(seeds) == 0: 見つからなかった
+            searcher.reset()
+        else:
+            return seeds.pop()
