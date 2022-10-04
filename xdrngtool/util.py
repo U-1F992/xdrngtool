@@ -4,7 +4,6 @@ from typing import List, Optional, Set, Tuple
 from xddb import PlayerTeam, EnemyTeam, QuickBattleSeedSearcher, XDDBClient, generate_quick_battle
 from lcg.gc import LCG
 
-from .abc import TeamPair, XDRNGOperations
 from .constant import *
 
 def get_wait_time(
@@ -215,37 +214,4 @@ def is_even(value: int) -> bool:
     return value % 2 == 0
 def is_odd(value: int) -> bool:
     return not is_even(value)
-
-def get_current_seed(operations: XDRNGOperations, tsv: Optional[int] = None) -> int:
-    """現在のseedを取得します。
     
-    Args:
-        operations (XDRNGOperations): XDRNGOperations抽象クラスを継承したクラスのオブジェクト
-        tsv (int, optional):TSV。正確に指定されない場合、実際のいますぐバトルの生成結果および回数は異なる可能性が生じます。 Defaults to None.
-
-    Raises:
-        Exception: コールバックが例外で停止した場合に発生します。誤操作などで回復不能（リセット）に陥った際に利用できます。
-
-    Returns:
-        int: 現在のseed
-    """
-    
-    client = XDDBClient()
-    searcher = QuickBattleSeedSearcher(client) if tsv is None else QuickBattleSeedSearcher(client, tsv)
-    
-    while True:
-        try:
-            generated = operations.generate_next_team_pair()
-        except:
-            raise
-        seeds = searcher.next(*generated)
-        
-        if seeds is None or len(seeds) > 1:
-            # None: 足りない
-            # len(seeds) > 1: 絞れていない
-            continue
-        elif len(seeds) == 0:
-            # len(seeds) == 0: 見つからなかった
-            searcher.reset()
-        else:
-            return seeds.pop()
