@@ -1,15 +1,15 @@
 from xddb import QuickBattleSeedSearcher
 
-from .protocol import Operation, TeamPair
+from .protocol import OperationReturnsTeamPair, TeamPair
 
 class CurrentSeedSearcher():
     """いますぐバトル生成済み画面から、現在のseedを求める。
     """
-    def __init__(self, searcher: QuickBattleSeedSearcher, generate_next_team_pair: Operation[TeamPair]) -> None:
+    def __init__(self, searcher: QuickBattleSeedSearcher, generate_next_team_pair: OperationReturnsTeamPair) -> None:
         """
         Args:
             searcher (QuickBattleSeedSearcher):
-            generate_next_team_pair (Operation[TeamPair]): 現在のいますぐバトル生成結果を破棄し、再度生成する
+            generate_next_team_pair (OperationReturnsTeamPair): 現在のいますぐバトル生成結果を破棄し、再度生成する
         """
         self.__searcher = searcher
         self.__generate_next_team_pair = generate_next_team_pair

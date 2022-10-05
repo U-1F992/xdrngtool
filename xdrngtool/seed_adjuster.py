@@ -6,7 +6,7 @@ from lcg.gc import LCG
 from xddb import EnemyTeam, generate_quick_battle
 
 from .current_seed_searcher import CurrentSeedSearcher
-from .protocol import Operation, TeamPair
+from .protocol import Operation, OperationReturnsTeamPair, OperationTakesTimedelta, TeamPair
 from .util import decide_route, decode_quick_battle, get_wait_time
 
 class SeedAdjuster():
@@ -15,35 +15,38 @@ class SeedAdjuster():
     def __init__(
         self, 
         current_seed_searcher: CurrentSeedSearcher,
-        generate_next_team_pair: Operation[TeamPair],
-        enter_quick_battle: Operation[None],
-        exit_quick_battle: Operation[None],
-        set_cursor_to_setting: Operation[None],
-        change_setting: Operation[None],
-        load: Operation[None],
-        write_report: Operation[None],
-        set_cursor_to_items: Operation[None],
-        open_items: Operation[None],
-        watch_steps: Operation[None],
+        generate_next_team_pair: OperationReturnsTeamPair,
+        enter_wait_and_exit_quick_battle: OperationTakesTimedelta,
+        set_cursor_to_setting: Operation,
+        change_setting: Operation,
+        load: Operation,
+        write_report: Operation,
+        set_cursor_to_items: Operation,
+        open_items: Operation,
+        watch_steps: Operation,
+
+        tsv: Optional[int] = None, 
+        advances_by_opening_items: Optional[int] = None,
     ) -> None:
         """
         Args:
             current_seed_searcher (CurrentSeedSearcher): 
-            generate_next_team_pair (Operation[TeamPair]): 現在のいますぐバトル生成結果を破棄し、再度生成する
-            enter_quick_battle (Operation[None]): 「このポケモンで　はじめてもよいですか？」「はい」からいますぐバトルを開始し、降参「はい」まで誘導する
-            exit_quick_battle (Operation[None]): 降参「はい」からいますぐバトルを降参し、1回いますぐバトルを生成する
-            set_cursor_to_setting (Operation[None]): いますぐバトル生成済み画面から、「せってい」にカーソルを合わせる
-            change_setting (Operation[None]): 「せってい」にカーソルが合った状態から、設定を変更して保存、「せってい」にカーソルを戻す
-            load (Operation[None]): 「せってい」にカーソルが合った状態からロードし、メニューを開き「レポート」にカーソルを合わせる
-            write_report (Operation[None]): 「レポート」にカーソルが合った状態から、レポートを書き、「レポート」にカーソルを戻す
-            set_cursor_to_items (Operation[None]): 「レポート」にカーソルが合った状態から、「もちもの」にカーソルを合わせる
-            open_items (Operation[None]): 「もちもの」にカーソルが合った状態から、もちものを開いて閉じる
-            watch_steps (Operation[None]): メニューが開いている状態から、メニューを閉じ1回腰振りさせ、再度メニューを開く
+            generate_next_team_pair (OperationReturnsTeamPair): 現在のいますぐバトル生成結果を破棄し、再度生成する
+            enter_wait_and_exit_quick_battle (OperationTakesTimedelta): 「このポケモンで　はじめてもよいですか？」「はい」からいますぐバトルを開始し、降参「はい」まで誘導。timedelta時間待機した後、いますぐバトルを降参し、1回いますぐバトルを生成する
+            set_cursor_to_setting (Operation): いますぐバトル生成済み画面から、「せってい」にカーソルを合わせる
+            change_setting (Operation): 「せってい」にカーソルが合った状態から、設定を変更して保存、「せってい」にカーソルを戻す
+            load (Operation): 「せってい」にカーソルが合った状態からロードし、メニューを開き「レポート」にカーソルを合わせる
+            write_report (Operation): 「レポート」にカーソルが合った状態から、レポートを書き、「レポート」にカーソルを戻す
+            set_cursor_to_items (Operation): 「レポート」にカーソルが合った状態から、「もちもの」にカーソルを合わせる
+            open_items (Operation): 「もちもの」にカーソルが合った状態から、もちものを開いて閉じる
+            watch_steps (Operation): メニューが開いている状態から、メニューを閉じ1回腰振りさせ、再度メニューを開く
+            
+            tsv (Optional[int]): TSV
+            advances_by_opening_items (Optional[int]): もちものを開く際の消費数
         """
         self.__current_seed_searcher = current_seed_searcher
         self.__generate_next_team_pair = generate_next_team_pair
-        self.__enter_quick_battle = enter_quick_battle
-        self.__exit_quick_battle = exit_quick_battle
+        self.__enter_wait_and_exit_quick_battle = enter_wait_and_exit_quick_battle
         self.__set_cursor_to_setting = set_cursor_to_setting
         self.__change_setting = change_setting
         self.__load = load
@@ -52,39 +55,40 @@ class SeedAdjuster():
         self.__open_items = open_items
         self.__watch_steps = watch_steps
 
+        self.__tsv = tsv
+        self.__advances_by_opening_items = advances_by_opening_items
+
     def execute(
         self, 
         target: Tuple[int, timedelta], 
-        tsv: Optional[int], 
-        advances_by_opening_items: Optional[int],
     ) -> None:
         """
         Args:
             target (Tuple[int, timedelta]): 目標seedと待機時間のタプル
-            tsv (Optional[int]): TSV
-            advances_by_opening_items (Optional[int]): もちものを開く際の消費数
         """
-        current_seed = __advance_by_moltres(self.__generate_next_team_pair, self.__enter_quick_battle, self.__exit_quick_battle, target, tsv)
-        __advance_according_to_route(self.__current_seed_searcher, self.__generate_next_team_pair, self.__set_cursor_to_setting, self.__change_setting, self.__load, self.__write_report, self.__set_cursor_to_items, self.__open_items, self.__watch_steps, current_seed, target, tsv, advances_by_opening_items)
+        current_seed = __advance_by_moltres(
+            self.__current_seed_searcher, self.__generate_next_team_pair, self.__enter_wait_and_exit_quick_battle, 
+            target
+        )
+        __advance_according_to_route(
+            self.__current_seed_searcher, self.__generate_next_team_pair, self.__set_cursor_to_setting, self.__change_setting, self.__load, self.__write_report, self.__set_cursor_to_items, self.__open_items, self.__watch_steps, 
+            current_seed, target, self.__tsv, self.__advances_by_opening_items
+        )
         
 def __advance_by_moltres(
     current_seed_searcher: CurrentSeedSearcher,
-    generate_next_team_pair: Operation[TeamPair],
-    enter_quick_battle: Operation[None],
-    exit_quick_battle: Operation[None],
+    generate_next_team_pair: OperationReturnsTeamPair,
+    enter_wait_and_exit_quick_battle: OperationTakesTimedelta,
 
     target: Tuple[int, timedelta],
-    tsv: Optional[int],
 ) -> int:
     """いますぐバトルにファイヤーを出し、高速消費する。
 
     Args:
         current_seed_searcher (CurrentSeedSearcher): 
-        generate_next_team_pair (Operation[TeamPair]): _description_
-        enter_quick_battle (Operation[None]): _description_
-        exit_quick_battle (Operation[None]): _description_
+        generate_next_team_pair (OperationReturnsTeamPair): _description_
+        enter_wait_and_exit_quick_battle (OperationTakesTimedelta): _description_
         target (Tuple[int, timedelta]):  目標seedと待機時間のタプル
-        tsv (Optional[int]): TSV
 
     Raises:
         Exception: _description_
@@ -103,9 +107,7 @@ def __advance_by_moltres(
         if team_pair[1][0] == EnemyTeam.Moltres:
             break
 
-    enter_quick_battle.run()
-    sleep(target[1].total_seconds())
-    exit_quick_battle.run()
+    enter_wait_and_exit_quick_battle.run(target[1])
     
     current_seed = current_seed_searcher.search()
     
@@ -118,14 +120,14 @@ def __advance_by_moltres(
 
 def __advance_according_to_route(
     current_seed_searcher: CurrentSeedSearcher,
-    generate_next_team_pair: Operation[TeamPair],
-    set_cursor_to_setting: Operation[None],
-    change_setting: Operation[None],
-    load: Operation[None],
-    write_report: Operation[None],
-    set_cursor_to_items: Operation[None],
-    open_items: Operation[None],
-    watch_steps: Operation[None],
+    generate_next_team_pair: OperationReturnsTeamPair,
+    set_cursor_to_setting: Operation,
+    change_setting: Operation,
+    load: Operation,
+    write_report: Operation,
+    set_cursor_to_items: Operation,
+    open_items: Operation,
+    watch_steps: Operation,
     
     current_seed: int,
     target: Tuple[int, timedelta],
@@ -136,14 +138,14 @@ def __advance_according_to_route(
 
     Args:
         current_seed_searcher (CurrentSeedSearcher): 
-        generate_next_team_pair (Operation[TeamPair]): 現在のいますぐバトル生成結果を破棄し、再度生成する
-        set_cursor_to_setting (Operation[None]): いますぐバトル生成済み画面から、「せってい」にカーソルを合わせる
-        change_setting (Operation[None]): 「せってい」にカーソルが合った状態から、設定を変更して保存、「せってい」にカーソルを戻す
-        load (Operation[None]): 「せってい」にカーソルが合った状態からロードし、メニューを開き「レポート」にカーソルを合わせる
-        write_report (Operation[None]): 「レポート」にカーソルが合った状態から、レポートを書き、「レポート」にカーソルを戻す
-        set_cursor_to_items (Operation[None]): 「レポート」にカーソルが合った状態から、「もちもの」にカーソルを合わせる
-        open_items (Operation[None]): 「もちもの」にカーソルが合った状態から、もちものを開いて閉じる
-        watch_steps (Operation[None]): メニューが開いている状態から、メニューを閉じ1回腰振りさせ、再度メニューを開く
+        generate_next_team_pair (OperationReturnsTeamPair): 現在のいますぐバトル生成結果を破棄し、再度生成する
+        set_cursor_to_setting (Operation): いますぐバトル生成済み画面から、「せってい」にカーソルを合わせる
+        change_setting (Operation): 「せってい」にカーソルが合った状態から、設定を変更して保存、「せってい」にカーソルを戻す
+        load (Operation): 「せってい」にカーソルが合った状態からロードし、メニューを開き「レポート」にカーソルを合わせる
+        write_report (Operation): 「レポート」にカーソルが合った状態から、レポートを書き、「レポート」にカーソルを戻す
+        set_cursor_to_items (Operation): 「レポート」にカーソルが合った状態から、「もちもの」にカーソルを合わせる
+        open_items (Operation): 「もちもの」にカーソルが合った状態から、もちものを開いて閉じる
+        watch_steps (Operation): メニューが開いている状態から、メニューを閉じ1回腰振りさせ、再度メニューを開く
 
         current_seed (int): 現在のseed
         target (Tuple[int, timedelta]): 目標seedと待機時間のタプル
@@ -167,11 +169,17 @@ def __advance_according_to_route(
                 _lcg = LCG(seed_before)
                 team_suggested, _ = decode_quick_battle(generate_quick_battle(_lcg, tsv_suggested))
                 if team_generated == team_suggested:
-                    __advance_according_to_route(_lcg.seed, target, tsv, advances_by_opening_items)
+                    __advance_according_to_route(
+                        current_seed_searcher, generate_next_team_pair, set_cursor_to_setting, change_setting, load, write_report, set_cursor_to_items, open_items, watch_steps,
+                        _lcg.seed, target, tsv, advances_by_opening_items
+                    )
                     return
 
             conflict_current_seed = current_seed_searcher.search()
-            __advance_according_to_route(conflict_current_seed, target, tsv, advances_by_opening_items)
+            __advance_according_to_route(
+                current_seed_searcher, generate_next_team_pair, set_cursor_to_setting, change_setting, load, write_report, set_cursor_to_items, open_items, watch_steps,
+                conflict_current_seed, target, tsv, advances_by_opening_items
+            )
             return
     
     set_cursor_to_setting.run()

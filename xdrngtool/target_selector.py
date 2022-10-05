@@ -8,11 +8,11 @@ from .util import get_wait_time, is_suitable_for_waiting
 class TargetSelector():
     """初期seed厳選を行い、目標seedを決定する。
     """
-    def __init__(self, current_seed_searcher: CurrentSeedSearcher, transition_to_quick_battle: Operation[None]) -> None:
+    def __init__(self, current_seed_searcher: CurrentSeedSearcher, transition_to_quick_battle: Operation) -> None:
         """
         Args:
             current_seed_searcher (CurrentSeedSearcher): 
-            transition_to_quick_battle (Operation[None]): リセットし、1回いますぐバトル（さいきょう）を生成した画面まで誘導する
+            transition_to_quick_battle (Operation): リセットし、1回いますぐバトル（さいきょう）を生成した画面まで誘導する
             tsv (Optional[int]): _description_
         """
         self.__current_seed_searcher = current_seed_searcher
