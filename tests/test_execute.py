@@ -1,6 +1,5 @@
-from tkinter.filedialog import Open
 from xddb import QuickBattleSeedSearcher, XDDBClient
-from xdrngtool import execute, TargetDecider, CurrentSeedSearcher, TeamPair, Advancer
+from xdrngtool import execute_automation, TargetSelector, CurrentSeedSearcher, TeamPair, SeedAdjuster
 
 class GenerateNextTeamPair():
     def run(self) -> TeamPair:
@@ -42,21 +41,23 @@ advances_by_opening_items = None
 client = XDDBClient()
 searcher = QuickBattleSeedSearcher(client, tsv) if tsv is not None else QuickBattleSeedSearcher(client)
 
-generate_next_team_pair = GenerateNextTeamPair()
-transition_to_quick_battle = TransitionToQuickBattle()
-enter_quick_battle = EnterQuickBattle()
-exit_quick_battle = ExitQuickBattle()
-set_cursor_to_setting = SetCursorToSetting()
-change_setting = ChangeSetting()
-load = Load()
-write_report = WriteReport()
-set_cursor_to_items = SetCursorToItems()
-open_items = OpenItems()
-watch_steps = WatchSteps()
+operations = (
+    GenerateNextTeamPair(),
+    TransitionToQuickBattle(),
+    EnterQuickBattle(),
+    ExitQuickBattle(),
+    SetCursorToSetting(),
+    ChangeSetting(),
+    Load(),
+    WriteReport(),
+    SetCursorToItems(),
+    OpenItems(),
+    WatchSteps(),
+)
 
-current_seed_searcher = CurrentSeedSearcher(searcher, generate_next_team_pair)
+current_seed_searcher = CurrentSeedSearcher(searcher, operations[0])
 
-target_decider = TargetDecider(current_seed_searcher, transition_to_quick_battle)
-advancer = Advancer(current_seed_searcher, generate_next_team_pair, enter_quick_battle, exit_quick_battle, set_cursor_to_setting, change_setting, load, write_report, set_cursor_to_items, open_items, watch_steps)
+target_selector = TargetSelector(current_seed_searcher, operations[1])
+seed_adjuster = SeedAdjuster(current_seed_searcher, operations[0], *operations[2:])
 
-execute(target_decider, advancer, [], tsv, advances_by_opening_items)
+execute_automation(target_selector, seed_adjuster, [], tsv, advances_by_opening_items)

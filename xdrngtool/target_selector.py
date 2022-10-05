@@ -5,7 +5,7 @@ from .current_seed_searcher import CurrentSeedSearcher
 from .protocol import Operation
 from .util import get_wait_time, is_suitable_for_waiting
 
-class TargetDecider():
+class TargetSelector():
     """初期seed厳選を行い、目標seedを決定する。
     """
     def __init__(self, current_seed_searcher: CurrentSeedSearcher, transition_to_quick_battle: Operation[None]) -> None:

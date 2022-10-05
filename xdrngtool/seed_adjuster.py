@@ -9,7 +9,7 @@ from .current_seed_searcher import CurrentSeedSearcher
 from .protocol import Operation, TeamPair
 from .util import decide_route, decode_quick_battle, get_wait_time
 
-class Advancer():
+class SeedAdjuster():
     """目標のseedまで消費を実行する。
     """
     def __init__(

@@ -1,10 +1,11 @@
 from datetime import timedelta
 from typing import List, Optional, Set, Tuple
 
-from xddb import PlayerTeam, EnemyTeam, QuickBattleSeedSearcher, XDDBClient, generate_quick_battle
+from xddb import PlayerTeam, EnemyTeam, generate_quick_battle
 from lcg.gc import LCG
 
 from .constant import *
+from .protocol import TeamPair
 
 def get_wait_time(
     current_seed: int,
@@ -115,7 +116,7 @@ def decide_route(
         # - もちもの消費が偶数であり残り消費数がADVANCES_BY_WRITE_REPORT=63より少ない奇数である場合、ADVANCES_BY_WRITE_REPORTより小さい奇数は消費できない
         # - もちもの消費が奇数だが、残り消費数がもちもの消費より少ない場合、もちもの消費より小さい奇数は消費できない
         # ため、いますぐバトルの生成を減らして残り消費数を増やす必要がある
-        while (is_even(advances_by_opening_items) and leftover < ADVANCES_BY_WRITING_REPORT and is_odd(leftover)) or (is_odd(advances_by_opening_items) and leftover < advances_by_opening_items):
+        while (__is_even(advances_by_opening_items) and leftover < ADVANCES_BY_WRITING_REPORT and __is_odd(leftover)) or (__is_odd(advances_by_opening_items) and leftover < advances_by_opening_items):
             try:
                 sequence.pop()
             except IndexError:
@@ -128,7 +129,7 @@ def decide_route(
         # - 残り消費数が奇数である場合、レポート回数は奇数である
         # - 残り消費数が偶数である場合、偶数である
         write_report = leftover // ADVANCES_BY_WRITING_REPORT
-        if (is_odd(leftover) and is_even(write_report)) or (is_even(leftover) and is_odd(write_report)):
+        if (__is_odd(leftover) and __is_even(write_report)) or (__is_even(leftover) and __is_odd(write_report)):
             write_report = write_report - 1 if write_report != 0 else 0
         leftover -= ADVANCES_BY_WRITING_REPORT * write_report
 
@@ -140,7 +141,7 @@ def decide_route(
         # - 残り消費数が奇数である場合、もちものを開く回数は奇数である
         # - 残り消費数が偶数である場合、偶数である
         open_items = leftover // advances_by_opening_items
-        if (is_odd(leftover) and is_even(open_items)) or (is_even(leftover) and is_odd(open_items)):
+        if (__is_odd(leftover) and __is_even(open_items)) or (__is_even(leftover) and __is_odd(open_items)):
             open_items = open_items - 1 if open_items != 0 else 0
         leftover -= advances_by_opening_items * open_items
 
@@ -157,10 +158,10 @@ def decide_route(
         teams.append((team, seed_before, psvs))
 
     route = (teams, change_setting, write_report, open_items, watch_steps)
-    test_route(route, current_seed, target_seed, tsv, advances_by_opening_items) # あまり自信がないのでチェック
+    __test_route(route, current_seed, target_seed, tsv, advances_by_opening_items) # あまり自信がないのでチェック
     return route
 
-def test_route(
+def __test_route(
     route: Tuple[List[Tuple[TeamPair, int, Set[int]]], int, int, int, int],
     current_seed: int,
     target_seed: int,
@@ -210,8 +211,8 @@ def decode_quick_battle(raw: Tuple[PlayerTeam, EnemyTeam, int, Set[int]]) -> Tup
     
     return ((p, e), p_team_psvs)
 
-def is_even(value: int) -> bool:
+def __is_even(value: int) -> bool:
     return value % 2 == 0
-def is_odd(value: int) -> bool:
-    return not is_even(value)
+def __is_odd(value: int) -> bool:
+    return not __is_even(value)
     
