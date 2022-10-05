@@ -1,12 +1,11 @@
 from datetime import timedelta
-from time import sleep
 from typing import Optional, Tuple
 
 from lcg.gc import LCG
 from xddb import EnemyTeam, generate_quick_battle
 
 from .current_seed_searcher import CurrentSeedSearcher
-from .protocol import Operation, OperationReturnsTeamPair, OperationTakesTimedelta, TeamPair
+from .protocol import Operation, OperationReturnsTeamPair, OperationTakesTimedelta
 from .util import decide_route, decode_quick_battle, get_wait_time
 
 class SeedAdjuster():

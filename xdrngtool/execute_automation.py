@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List
 from .seed_adjuster import SeedAdjuster
 from .target_selector import TargetSelector
 
