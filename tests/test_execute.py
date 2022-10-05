@@ -1,4 +1,4 @@
-from xddb import QuickBattleSeedSearcher, XDDBClient
+from xddb import EnemyTeam, PlayerTeam, QuickBattleSeedSearcher, XDDBClient
 from xdrngtool import execute_automation, TargetSelector, CurrentSeedSearcher, TeamPair, SeedAdjuster
 
 class GenerateNextTeamPair():
@@ -6,7 +6,7 @@ class GenerateNextTeamPair():
         pass
 class TransitionToQuickBattle():
     def run(self):
-        pass
+        return ((PlayerTeam.Mewtwo, 100, 100), (EnemyTeam.Articuno, 100, 100))
 class EnterQuickBattle():
     def run(self):
         pass

@@ -1,5 +1,5 @@
-from typing import Generic, Protocol, Tuple, TypeVar
-
+from typing import Generic, Tuple, TypeVar #, Protocol # 3.8+
+from typing_extensions import Protocol # ~3.7
 from xddb import EnemyTeam, PlayerTeam
 
 # いますぐバトルの生成結果を表すTypeAlias
