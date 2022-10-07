@@ -204,5 +204,5 @@ def _search_pair_with_the_smallest_sum_under_2520(total_advances: int) -> Tuple[
             if 63 * x + 40 * y == total_advances:
                 pairs.append((x, y))
     if len(pairs) == 0:
-        raise Exception("The specified number cannot be combined in 64 and 40.")
+        raise Exception(f"The specified number {total_advances} cannot be combined in 64 and 40.")
     return sorted(pairs, key=lambda p: p[0] + p[1]).pop(0)
