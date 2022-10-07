@@ -4,16 +4,16 @@ from typing import Optional, Tuple
 from lcg.gc import LCG
 from xddb import EnemyTeam, generate_quick_battle
 
-from .current_seed_searcher import CurrentSeedSearcher
-from .protocol import Operation, OperationReturnsTeamPair, OperationTakesTimedelta
-from .util import search_path, decode_quick_battle, get_wait_time
+from .protocol import ICurrentSeedSearcher, Operation, OperationReturnsTeamPair, OperationTakesTimedelta
+from .search_path import search_path
+from .util import decode_quick_battle, get_wait_time
 
 class SeedAdjuster():
     """目標のseedまで消費を実行する。
     """
     def __init__(
         self, 
-        current_seed_searcher: CurrentSeedSearcher,
+        current_seed_searcher: ICurrentSeedSearcher,
         generate_next_team_pair: OperationReturnsTeamPair,
         enter_wait_and_exit_quick_battle: OperationTakesTimedelta,
         set_cursor_to_setting: Operation,
@@ -66,7 +66,7 @@ class SeedAdjuster():
         )
         
 def __advance_by_moltres(
-    current_seed_searcher: CurrentSeedSearcher,
+    current_seed_searcher: ICurrentSeedSearcher,
     generate_next_team_pair: OperationReturnsTeamPair,
     enter_wait_and_exit_quick_battle: OperationTakesTimedelta,
 
@@ -109,7 +109,7 @@ def __advance_by_moltres(
     return current_seed
 
 def __advance_according_to_path(
-    current_seed_searcher: CurrentSeedSearcher,
+    current_seed_searcher: ICurrentSeedSearcher,
     generate_next_team_pair: OperationReturnsTeamPair,
     set_cursor_to_setting: Operation,
     change_setting: Operation,

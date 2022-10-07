@@ -29,11 +29,12 @@ class TestSearchPath(unittest.TestCase):
             (0xfe645768, 0xff7eafab, None, 13),
             (0x941a74bb, 0x4f9370a0, None, 17)
         ]
-        for current_seed, target_seed, tsv, advances_by_opening_items in test_case:
-            with self.subTest(current_seed=f"{current_seed:X}", target_seed=f"{target_seed:X}", tsv=tsv, advances_by_opening_items=advances_by_opening_items):
-                path = search_path(current_seed, target_seed, tsv, advances_by_opening_items)
-                result_seed = _advance_according_to_path(current_seed, path, tsv, advances_by_opening_items)
-                self.assertEqual(target_seed, result_seed)
+        for current_seed, expected, tsv, advances_by_opening_items in test_case:
+            
+            with self.subTest(current_seed=f"{current_seed:X}", expected=f"{expected:X}", tsv=tsv, advances_by_opening_items=advances_by_opening_items):
+                path = search_path(current_seed, expected, tsv, advances_by_opening_items)
+                actual = _advance_according_to_path(current_seed, path, tsv, advances_by_opening_items)
+                self.assertEqual(expected, actual)
 
 if __name__ == "__main__":
     unittest.main()

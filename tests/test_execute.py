@@ -1,45 +1,41 @@
 from datetime import timedelta
-from time import sleep
 from typing import List, Optional
 from xddb import EnemyTeam, PlayerTeam, QuickBattleSeedSearcher, XDDBClient
 from xdrngtool import AutomationExecutor, TargetSelector, CurrentSeedSearcher, TeamPair, SeedAdjuster
 
-
-def _indicate(obj):
-    print(f"{obj.__class__.__name__} called")
-    sleep(0.3)
-
 class TransitionToQuickBattle():
+    """リセットし、1回いますぐバトル（さいきょう）を生成した画面まで誘導する。
+    """
     def run(self):
-        _indicate(self)
         pass
 class GenerateNextTeamPair():
+    """現在のいますぐバトル生成結果を破棄し、再度生成する。
+    """
     def run(self) -> TeamPair:
-        _indicate(self)
         return ((PlayerTeam.Mewtwo, 100, 100), (EnemyTeam.Articuno, 100, 100))
 class EnterWaitAndExitQuickBattle():
+    """「このポケモンで　はじめてもよいですか？」「はい」からいますぐバトルを開始し、降参「はい」まで誘導。timedelta時間待機した後、いますぐバトルを降参し、1回いますぐバトルを生成する。
+    """
     def run(self, td: timedelta):
-        _indicate(self)
         pass
 class SetCursorToSetting():
+    """いますぐバトル生成済み画面から、「せってい」にカーソルを合わせる。
+    """
     def run(self):
         pass
 class ChangeSetting():
+    """「せってい」にカーソルが合った状態から、設定を変更して保存、「せってい」にカーソルを戻す。
+    """
     def run(self):
         pass
 class Load():
+    """「せってい」にカーソルが合った状態からロードし、メニューを開き「レポート」にカーソルを合わせる。
+    """
     def run(self):
         pass
 class WriteReport():
-    def run(self):
-        pass
-class SetCursorToItems():
-    def run(self):
-        pass
-class OpenItems():
-    def run(self):
-        pass
-class WatchSteps():
+    """「レポート」にカーソルが合った状態から、レポートを書き、「レポート」にカーソルを戻す。
+    """
     def run(self):
         pass
 

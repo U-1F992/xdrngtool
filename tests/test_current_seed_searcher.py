@@ -1,16 +1,9 @@
-from typing import List
 import unittest
 
 from xddb import PlayerTeam, EnemyTeam, XDDBClient, QuickBattleSeedSearcher
-from xdrngtool import CurrentSeedSearcher, TeamPair
+from xdrngtool import CurrentSeedSearcher
 
-class MockOperationReturnsTeamPair():
-    """コンストラクタでリストを受け取り、runが呼ばれる度に先頭から返す。
-    """
-    def __init__(self, sequence: List[TeamPair]) -> None:
-        self.__sequence = sequence
-    def run(self):
-        return self.__sequence.pop(0)
+from mock_operation import MockOperationReturnsTeamPair
 
 class TestCurrentSeedSearcher(unittest.TestCase):
     def test_current_seed_searcher(self):
@@ -38,12 +31,13 @@ class TestCurrentSeedSearcher(unittest.TestCase):
             # 途中で見失うもの
         ]
         for sequence, tsv, expected in test_case:
+            
+            client = XDDBClient()
+            searcher = QuickBattleSeedSearcher(client, tsv) if tsv is not None else QuickBattleSeedSearcher(client)
+            operation = MockOperationReturnsTeamPair(sequence)
+            current_seed_searcher = CurrentSeedSearcher(searcher, operation)
+
             with self.subTest(sequence=sequence, tsv=tsv, expected=f"{expected:X}"):
-                client = XDDBClient()
-                searcher = QuickBattleSeedSearcher(client, tsv) if tsv is not None else QuickBattleSeedSearcher(client)
-                operation = MockOperationReturnsTeamPair(sequence)
-                current_seed_searcher = CurrentSeedSearcher(searcher, operation)
-                
                 current_seed = current_seed_searcher.search()
                 self.assertEqual(expected, current_seed)
 

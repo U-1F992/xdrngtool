@@ -2,19 +2,17 @@ from datetime import timedelta
 from typing import List, Tuple
 
 from .constant import *
-from .current_seed_searcher import CurrentSeedSearcher
-from .protocol import Operation
+from .protocol import ICurrentSeedSearcher, Operation
 from .util import get_wait_time
 
 class TargetSelector():
     """初期seed厳選を行い、目標seedを決定する。
     """
-    def __init__(self, current_seed_searcher: CurrentSeedSearcher, transition_to_quick_battle: Operation) -> None:
+    def __init__(self, current_seed_searcher: ICurrentSeedSearcher, transition_to_quick_battle: Operation) -> None:
         """
         Args:
             current_seed_searcher (CurrentSeedSearcher): 
             transition_to_quick_battle (Operation): リセットし、1回いますぐバトル（さいきょう）を生成した画面まで誘導する
-            tsv (Optional[int]): _description_
         """
         self.__current_seed_searcher = current_seed_searcher
         self.__transition_to_quick_battle = transition_to_quick_battle

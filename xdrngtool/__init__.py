@@ -1,4 +1,6 @@
-from xdrngtool.util import search_path
+from xdrngtool.search_path import search_path
+from xdrngtool.execute_automation import execute_automation
+
 from xdrngtool.seed_adjuster import SeedAdjuster
 from xdrngtool.current_seed_searcher import CurrentSeedSearcher
 from xdrngtool.automation_executor import AutomationExecutor
