@@ -1,4 +1,5 @@
 from datetime import timedelta
+import math
 from typing import List, Optional, Set, Tuple
 
 from xddb import PlayerTeam, EnemyTeam, generate_quick_battle
@@ -24,23 +25,12 @@ def get_wait_time(
     sec = index / ADVANCES_PER_SECOND_BY_MOLTRES
     return timedelta(seconds=sec) - LEFTOVER_WAIT_TIME
 
-def is_suitable_for_waiting(wait_time: timedelta) -> bool:
-    """待機時間が待機に適しているか判定します。
-
-    Args:
-        wait_time (timedelta): 待機時間
-
-    Returns:
-        bool: 待機に適しているか
-    """
-    return MINIMUM_WAIT_TIME < wait_time and wait_time < MAXIMUM_WAIT_TIME
-
-def decide_route(
+def search_path(
     current_seed: int,
     target_seed: int,
     tsv: Optional[int] = None,
     advances_by_opening_items: Optional[int] = None
-) -> Tuple[List[Tuple[TeamPair, int, Set[int]]], int, int, int, int]:
+) -> Tuple[List[Tuple[TeamPair, int, Set[int]]], int, int]:
     """消費経路を算出します。
 
     Args:
@@ -50,11 +40,11 @@ def decide_route(
         advances_by_opening_items (Optional[int], optional): もちものを開く際の消費数。 Defaults to None.
 
     Returns:
-        Tuple[List[Tuple[TeamPair, int, Set[int]]], int, int, int, int]: 消費経路\n
-        （いますぐバトルの生成、生成前のseed、P1側手持ちのpsv）のタプルのリスト、設定変更回数、レポート回数、もちものを開く回数、腰振りを見る回数
+        Tuple[List[Tuple[TeamPair, int, Set[int]]], int, int]: 消費経路\n
+        （いますぐバトルの生成、生成前のseed、P1側手持ちのpsv）のタプルのリスト、設定変更回数、レポート回数
     """
     
-    CANNOT_REACH_ERROR = Exception(f"No way to reach {target_seed:X} from {current_seed:X}.")
+    CANNOT_REACH_EXCEPTION = Exception(f"No way to reach {target_seed:X} from {current_seed:X}.")
 
     total_advances = LCG.get_index(seed=target_seed, init_seed=current_seed)
     lcg = LCG(current_seed)
@@ -71,8 +61,6 @@ def decide_route(
     _teams: List[TeamPair] = []
     change_setting: int = 0
     write_report: int = 0
-    open_items: int = 0
-    watch_steps: int = 0
 
     if advances_by_opening_items is None:
         
@@ -82,15 +70,17 @@ def decide_route(
         leftover = total_advances
 
         if len(sequence) == 0:
+            # 1回も生成していないが、残りを40で割り切れない。
             if leftover % ADVANCES_BY_CHANGING_SETTING != 0:
-                raise CANNOT_REACH_ERROR
+                raise CANNOT_REACH_EXCEPTION
 
         else:
             can_finish: List[bool] = [item[1] % ADVANCES_BY_CHANGING_SETTING == 0 for item in sequence]
             try:
                 last_index = len(can_finish) - can_finish[::-1].index(True) - 1
             except ValueError:
-                raise CANNOT_REACH_ERROR
+                # リストの中にTrueがない、どこで切り上げても40で割り切れない。
+                raise CANNOT_REACH_EXCEPTION
 
             if last_index == 0:
                 leftover = sequence[0][1]
@@ -104,50 +94,27 @@ def decide_route(
     else:
         
         # advances_by_opening_itemsがNoneでない場合 => ロードする
-        # 40a + by_loading + 63b + by_opening_items*c + 2d で表す。
+        # 40a + by_loading + 63b で表す。
         
         advances_by_loading = (advances_by_opening_items - 1) * 2
-        leftover = total_advances
+        
         if len(sequence) == 0:
-            leftover -= advances_by_loading
+            leftover = total_advances - advances_by_loading
         else:
-            leftover = sequence[-1][1] - advances_by_loading
-        
-        # - もちもの消費が偶数であり残り消費数がADVANCES_BY_WRITE_REPORT=63より少ない奇数である場合、ADVANCES_BY_WRITE_REPORTより小さい奇数は消費できない
-        # - もちもの消費が奇数だが、残り消費数がもちもの消費より少ない場合、もちもの消費より小さい奇数は消費できない
-        # ため、いますぐバトルの生成を減らして残り消費数を増やす必要がある
-        while (__is_even(advances_by_opening_items) and leftover < ADVANCES_BY_WRITING_REPORT and __is_odd(leftover)) or (__is_odd(advances_by_opening_items) and leftover < advances_by_opening_items):
-            try:
+            # 残り消費数が63*40+by_loading以上になるまで生成を切り上げる
+            while sequence[-1][1] < ADVANCES_BY_WRITING_REPORT * ADVANCES_BY_CHANGING_SETTING + advances_by_loading:
                 sequence.pop()
-            except IndexError:
-                raise CANNOT_REACH_ERROR
-            leftover = sequence[-1][1] - advances_by_loading
-        _teams = [item[0] for item in sequence]
-
-        # レポート回数
-        # もちもの消費が偶数である場合、奇数の消費手段はレポートのみになるため
-        # - 残り消費数が奇数である場合、レポート回数は奇数である
-        # - 残り消費数が偶数である場合、偶数である
-        write_report = leftover // ADVANCES_BY_WRITING_REPORT
-        if (__is_odd(leftover) and __is_even(write_report)) or (__is_even(leftover) and __is_odd(write_report)):
-            write_report = write_report - 1 if write_report != 0 else 0
-        leftover -= ADVANCES_BY_WRITING_REPORT * write_report
-
-        # 設定変更回数
-        change_setting = leftover // ADVANCES_BY_CHANGING_SETTING
-        leftover -= ADVANCES_BY_CHANGING_SETTING * change_setting
+            if len(sequence) == 0:
+                leftover = total_advances - advances_by_loading
+            else:
+                leftover = sequence[-1][1] - advances_by_loading
         
-        # もちものを開く回数
-        # - 残り消費数が奇数である場合、もちものを開く回数は奇数である
-        # - 残り消費数が偶数である場合、偶数である
-        open_items = leftover // advances_by_opening_items
-        if (__is_odd(leftover) and __is_even(open_items)) or (__is_even(leftover) and __is_odd(open_items)):
-            open_items = open_items - 1 if open_items != 0 else 0
-        leftover -= advances_by_opening_items * open_items
-
-        # 腰振り回数
-        watch_steps = leftover // ADVANCES_BY_WATCHING_STEPS
-    
+        try:
+            write_report, change_setting = _search_pair_with_the_smallest_sum(leftover)
+        except:
+            raise CANNOT_REACH_EXCEPTION
+        _teams = [item[0] for item in sequence]
+        
     # _teamsを詰め替える
     # 生成結果、生成"前"のseed、psv
     teams: List[Tuple[TeamPair, int, Set[int]]] = []
@@ -157,32 +124,8 @@ def decide_route(
         team, psvs = decode_quick_battle(generate_quick_battle(_lcg, tsv))
         teams.append((team, seed_before, psvs))
 
-    route = (teams, change_setting, write_report, open_items, watch_steps)
-    __test_route(route, current_seed, target_seed, tsv, advances_by_opening_items) # あまり自信がないのでチェック
-    return route
-
-def __test_route(
-    route: Tuple[List[Tuple[TeamPair, int, Set[int]]], int, int, int, int],
-    current_seed: int,
-    target_seed: int,
-    tsv: Optional[int],
-    advances_by_opening_items: Optional[int]
-) -> None:
-    
-    teams, change_setting, write_report, open_items, watch_steps = route
-    advances_by_loading = (advances_by_opening_items - 1) * 2 if advances_by_opening_items is not None else 0
-
-    test_lcg = LCG(current_seed)
-    for i in teams:
-        generate_quick_battle(test_lcg, tsv)
-    test_lcg.adv(change_setting * ADVANCES_BY_CHANGING_SETTING)
-    test_lcg.adv(advances_by_loading)
-    test_lcg.adv(write_report * ADVANCES_BY_WRITING_REPORT)
-    if advances_by_opening_items is not None:
-        test_lcg.adv(open_items * advances_by_opening_items)
-    test_lcg.adv(watch_steps * ADVANCES_BY_WATCHING_STEPS)
-    if test_lcg.seed != target_seed:
-        raise Exception(f"Corner case has been found. Please report to the developer: \ncurrent_seed={current_seed:X}\ntarget_seed={target_seed:X}\ntsv={tsv}\nadvances_by_opening_items={advances_by_opening_items}\nresult={(len(teams), change_setting, write_report, open_items, watch_steps)}\nactual={test_lcg.seed:X}")
+    path = (teams, change_setting, write_report)
+    return path
 
 def decode_quick_battle(raw: Tuple[PlayerTeam, EnemyTeam, int, Set[int]]) -> Tuple[TeamPair, Set[int]]:
     """xddbから受け取る生データを、実際の生成結果に変換する
@@ -210,9 +153,56 @@ def decode_quick_battle(raw: Tuple[PlayerTeam, EnemyTeam, int, Set[int]]) -> Tup
     e = (e_team, hp[0], hp[1])
     
     return ((p, e), p_team_psvs)
-
-def __is_even(value: int) -> bool:
-    return value % 2 == 0
-def __is_odd(value: int) -> bool:
-    return not __is_even(value)
     
+def _search_pair_with_the_smallest_sum(total_advances: int) -> Tuple[int, int]:
+    """total_advances消費するために必要な設定変更回数とレポート回数の組を返す。
+
+    Args:
+        total_advances (int): 2520以上の整数
+
+    Returns:
+        Tuple[int, int]: 設定変更回数とレポート回数の組
+    
+    ---
+    `63*x+40*y=z`（`63*40<=z`の整数）を満たす`(x,y)`（`x`,`y`はそれぞれ0以上の整数）について、`x+y`が最小となるものを考える。
+
+    `63*x+40*y=z`は、`z`の値に関わらず整数解を持つ（証明省略）。
+    https://examist.jp/mathematics/integer/axby-kouzou/
+    
+    `63*x+40*y=1`の特殊解は`(7,-11)`より、`63*x+40*y=z`の特殊解は`(7*z,-11*z)`、
+    したがって一般解は、任意の整数を`t`とおいて`(40*t+7*z,-63*t-11*z)`。
+
+    `0<=x`かつ`0<=y`より、`t`の範囲は`-7*z/40<=t<=-11*z/63`
+
+    `x+y=-23*t-4*z`は単調減少するので、
+    `x+y`が最小となる`t`は`floor(-11*z/63)`
+    """
+
+    if total_advances < 2520:
+        # 2520未満の場合は全探索する。
+        # 見つからない場合はException
+        return _search_pair_with_the_smallest_sum_under_2520(total_advances)
+
+    t = math.floor(-11 * total_advances / 63)
+    return (40 * t + 7 * total_advances, -63 * t - 11 * total_advances)
+
+def _search_pair_with_the_smallest_sum_under_2520(total_advances: int) -> Tuple[int, int]:
+    """total_advances消費するために必要な設定変更回数とレポート回数の組を全探索で探す。。
+
+    Args:
+        total_advances (int): _description_
+
+    Raises:
+        Exception: _description_
+
+    Returns:
+        Tuple[int, int]: _description_
+    """
+    pairs: List[Tuple[int, int]] = []
+    for x in range(total_advances // 63 + 1):
+        for y in range(total_advances // 40 + 1):
+            if 63 * x + 40 * y == total_advances:
+                pairs.append((x, y))
+    if len(pairs) == 0:
+        raise Exception("The specified number cannot be combined in 64 and 40.")
+    return sorted(pairs, key=lambda p: p[0] + p[1]).pop(0)

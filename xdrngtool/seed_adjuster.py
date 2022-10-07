@@ -6,7 +6,7 @@ from xddb import EnemyTeam, generate_quick_battle
 
 from .current_seed_searcher import CurrentSeedSearcher
 from .protocol import Operation, OperationReturnsTeamPair, OperationTakesTimedelta
-from .util import decide_route, decode_quick_battle, get_wait_time
+from .util import search_path, decode_quick_battle, get_wait_time
 
 class SeedAdjuster():
     """目標のseedまで消費を実行する。
@@ -20,9 +20,6 @@ class SeedAdjuster():
         change_setting: Operation,
         load: Operation,
         write_report: Operation,
-        set_cursor_to_items: Operation,
-        open_items: Operation,
-        watch_steps: Operation,
 
         tsv: Optional[int] = None, 
         advances_by_opening_items: Optional[int] = None,
@@ -36,9 +33,6 @@ class SeedAdjuster():
             change_setting (Operation): 「せってい」にカーソルが合った状態から、設定を変更して保存、「せってい」にカーソルを戻す
             load (Operation): 「せってい」にカーソルが合った状態からロードし、メニューを開き「レポート」にカーソルを合わせる
             write_report (Operation): 「レポート」にカーソルが合った状態から、レポートを書き、「レポート」にカーソルを戻す
-            set_cursor_to_items (Operation): 「レポート」にカーソルが合った状態から、「もちもの」にカーソルを合わせる
-            open_items (Operation): 「もちもの」にカーソルが合った状態から、もちものを開いて閉じる
-            watch_steps (Operation): メニューが開いている状態から、メニューを閉じ1回腰振りさせ、再度メニューを開く
             
             tsv (Optional[int]): TSV
             advances_by_opening_items (Optional[int]): もちものを開く際の消費数
@@ -50,9 +44,6 @@ class SeedAdjuster():
         self.__change_setting = change_setting
         self.__load = load
         self.__write_report = write_report
-        self.__set_cursor_to_items = set_cursor_to_items
-        self.__open_items = open_items
-        self.__watch_steps = watch_steps
 
         self.__tsv = tsv
         self.__advances_by_opening_items = advances_by_opening_items
@@ -69,8 +60,8 @@ class SeedAdjuster():
             self.__current_seed_searcher, self.__generate_next_team_pair, self.__enter_wait_and_exit_quick_battle, 
             target
         )
-        __advance_according_to_route(
-            self.__current_seed_searcher, self.__generate_next_team_pair, self.__set_cursor_to_setting, self.__change_setting, self.__load, self.__write_report, self.__set_cursor_to_items, self.__open_items, self.__watch_steps, 
+        __advance_according_to_path(
+            self.__current_seed_searcher, self.__generate_next_team_pair, self.__set_cursor_to_setting, self.__change_setting, self.__load, self.__write_report,
             current_seed, target, self.__tsv, self.__advances_by_opening_items
         )
         
@@ -117,16 +108,13 @@ def __advance_by_moltres(
 
     return current_seed
 
-def __advance_according_to_route(
+def __advance_according_to_path(
     current_seed_searcher: CurrentSeedSearcher,
     generate_next_team_pair: OperationReturnsTeamPair,
     set_cursor_to_setting: Operation,
     change_setting: Operation,
     load: Operation,
     write_report: Operation,
-    set_cursor_to_items: Operation,
-    open_items: Operation,
-    watch_steps: Operation,
     
     current_seed: int,
     target: Tuple[int, timedelta],
@@ -142,16 +130,13 @@ def __advance_according_to_route(
         change_setting (Operation): 「せってい」にカーソルが合った状態から、設定を変更して保存、「せってい」にカーソルを戻す
         load (Operation): 「せってい」にカーソルが合った状態からロードし、メニューを開き「レポート」にカーソルを合わせる
         write_report (Operation): 「レポート」にカーソルが合った状態から、レポートを書き、「レポート」にカーソルを戻す
-        set_cursor_to_items (Operation): 「レポート」にカーソルが合った状態から、「もちもの」にカーソルを合わせる
-        open_items (Operation): 「もちもの」にカーソルが合った状態から、もちものを開いて閉じる
-        watch_steps (Operation): メニューが開いている状態から、メニューを閉じ1回腰振りさせ、再度メニューを開く
 
         current_seed (int): 現在のseed
         target (Tuple[int, timedelta]): 目標seedと待機時間のタプル
         tsv (Optional[int]): TSV
         advances_by_opening_items (Optional[int]): もちものを開く際の消費数
     """
-    teams, change_setting_count, write_report_count, open_items_count, watch_steps_count = decide_route(current_seed, target[0], tsv, advances_by_opening_items)
+    teams, change_setting_count, write_report_count = search_path(current_seed, target[0], tsv, advances_by_opening_items)
 
     for team_seed_psvs in teams:
         
@@ -168,15 +153,15 @@ def __advance_according_to_route(
                 _lcg = LCG(seed_before)
                 team_suggested, _ = decode_quick_battle(generate_quick_battle(_lcg, tsv_suggested))
                 if team_generated == team_suggested:
-                    __advance_according_to_route(
-                        current_seed_searcher, generate_next_team_pair, set_cursor_to_setting, change_setting, load, write_report, set_cursor_to_items, open_items, watch_steps,
+                    __advance_according_to_path(
+                        current_seed_searcher, generate_next_team_pair, set_cursor_to_setting, change_setting, load, write_report,
                         _lcg.seed, target, tsv, advances_by_opening_items
                     )
                     return
 
             conflict_current_seed = current_seed_searcher.search()
-            __advance_according_to_route(
-                current_seed_searcher, generate_next_team_pair, set_cursor_to_setting, change_setting, load, write_report, set_cursor_to_items, open_items, watch_steps,
+            __advance_according_to_path(
+                current_seed_searcher, generate_next_team_pair, set_cursor_to_setting, change_setting, load, write_report,
                 conflict_current_seed, target, tsv, advances_by_opening_items
             )
             return
@@ -191,8 +176,3 @@ def __advance_according_to_route(
     load.run()
     for _ in range(write_report_count):
         write_report.run()
-    set_cursor_to_items.run()
-    for _ in range(open_items_count):
-        open_items.run()
-    for _ in range(watch_steps_count):
-        watch_steps.run()

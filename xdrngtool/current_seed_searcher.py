@@ -1,6 +1,6 @@
 from xddb import QuickBattleSeedSearcher
 
-from .protocol import OperationReturnsTeamPair, TeamPair
+from .protocol import OperationReturnsTeamPair
 
 class CurrentSeedSearcher():
     """いますぐバトル生成済み画面から、現在のseedを求める。
