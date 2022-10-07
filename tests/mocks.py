@@ -1,3 +1,4 @@
+from cgitb import reset
 from datetime import timedelta
 import math
 import random
@@ -38,15 +39,28 @@ class MockGame():
         self.__tsv = tsv
         self.__advances_by_opening_items = advances_by_opening_items
         self.__lcg = LCG(0)
+
+        # 回数を数える
+        self.__reset = 0
+        self.__show_moltres = timedelta()
+        self.__generate_quick_battle = 0
+        self.__set_cursor_to_setting = False
         self.__change_setting = 0
+        self.__load = False
         self.__write_report = 0
 
     def generate_quick_battle(self) -> TeamPair:
         ret, _ = decode_quick_battle(generate_quick_battle(self.__lcg, self.__tsv))
+        if self.__show_moltres != timedelta():
+            self.__generate_quick_battle += 1
         return ret
     
     def show_moltres(self, td: timedelta):
         self.__lcg.adv(math.floor(3842 * td.total_seconds()))
+        self.__show_moltres = td
+
+    def set_cursor_to_setting(self):
+        self.__set_cursor_to_setting = True
 
     def change_setting(self):
         self.__lcg.adv(40)
@@ -56,6 +70,7 @@ class MockGame():
         if self.__advances_by_opening_items is None:
             raise Exception("Attempted to load even though advances_by_opening_items is None.")
         self.__lcg.adv((self.__advances_by_opening_items - 1) * 2)
+        self.__load = True
 
     def write_report(self):
         self.__lcg.adv(63)
@@ -63,7 +78,12 @@ class MockGame():
 
     def reset(self):
         self.__lcg = LCG(random.randint(0, 0xffffffff))
+        self.__reset += 1
+        self.__show_moltres = timedelta()
+        self.__generate_quick_battle = 0
+        self.__set_cursor_to_setting = False
         self.__change_setting = 0
+        self.__load = False
         self.__write_report = 0
     
     @property
@@ -72,4 +92,12 @@ class MockGame():
 
     @property
     def result(self):
-        return self.__change_setting, self.__write_report
+        return {
+            "reset": self.__reset,
+            "show_moltres": f"{self.__show_moltres}",
+            "generate_quick_battle": self.__generate_quick_battle,
+            "set_cursor_to_setting": self.__set_cursor_to_setting,
+            "change_setting": self.__change_setting,
+            "load": self.__load,
+            "write_report": self.__write_report,
+        }

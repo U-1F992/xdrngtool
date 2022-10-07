@@ -14,7 +14,7 @@ class TransitionToQuickBattle():
     def __init__(self, game: MockGame) -> None:
         self.__game = game
     def run(self):
-        print("Reset")
+        print("\n----------------------------------------\n")
         self.__game.reset()
 
 class GenerateNextTeamPair():
@@ -24,7 +24,7 @@ class GenerateNextTeamPair():
         self.__game = game
     def run(self) -> TeamPair:
         ret = self.__game.generate_quick_battle()
-        print(f"Generated: {ret}")
+        print(ret)
         return ret
 
 class EnterWaitAndExitQuickBattle():
@@ -34,13 +34,15 @@ class EnterWaitAndExitQuickBattle():
         self.__game = game
     def run(self, td: timedelta):
         self.__game.show_moltres(td)
-        print(f"Sleep: {td}")
+        print("~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ")
 
 class SetCursorToSetting():
     """いますぐバトル生成済み画面から、「せってい」にカーソルを合わせる。
     """
+    def __init__(self, game: MockGame) -> None:
+        self.__game = game
     def run(self):
-        print("Set cursor to setting")
+        self.__game.set_cursor_to_setting()
 
 class ChangeSetting():
     """「せってい」にカーソルが合った状態から、設定を変更して保存、「せってい」にカーソルを戻す。
@@ -71,14 +73,14 @@ class TestExecute(unittest.TestCase):
 
         target_seeds: List[int] = [0xbeefface]
         tsv: Optional[int] = None
-        advances_by_opening_items: Optional[int] = None
+        advances_by_opening_items: Optional[int] = 17
 
         game = MockGame(tsv, advances_by_opening_items)
         operations = (
             TransitionToQuickBattle(game),
             GenerateNextTeamPair(game),
             EnterWaitAndExitQuickBattle(game),
-            SetCursorToSetting(),
+            SetCursorToSetting(game),
             ChangeSetting(game),
             Load(game),
             WriteReport(game),
