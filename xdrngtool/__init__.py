@@ -1,3 +1,5 @@
+from xdrngtool.constant import title_logo
+
 from xdrngtool.search_path import search_path
 from xdrngtool.execute_automation import execute_automation
 

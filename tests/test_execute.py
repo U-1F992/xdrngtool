@@ -2,15 +2,12 @@ from datetime import timedelta
 from typing import List, Optional
 import unittest
 
-from xdrngtool import TeamPair
+from xdrngtool import TeamPair, execute_automation, title_logo
 
 from mocks import MockGame
-from xdrngtool.execute_automation import execute_automation
 
 
 class TransitionToQuickBattle():
-    """リセットし、1回いますぐバトル（さいきょう）を生成した画面まで誘導する。
-    """
     def __init__(self, game: MockGame) -> None:
         self.__game = game
     def run(self):
@@ -18,8 +15,6 @@ class TransitionToQuickBattle():
         self.__game.reset()
 
 class GenerateNextTeamPair():
-    """現在のいますぐバトル生成結果を破棄し、再度生成する。
-    """
     def __init__(self, game: MockGame) -> None:
         self.__game = game
     def run(self) -> TeamPair:
@@ -28,8 +23,6 @@ class GenerateNextTeamPair():
         return ret
 
 class EnterWaitAndExitQuickBattle():
-    """「このポケモンで　はじめてもよいですか？」「はい」からいますぐバトルを開始し、降参「はい」まで誘導。timedelta時間待機した後、いますぐバトルを降参し、1回いますぐバトルを生成する。
-    """
     def __init__(self, game: MockGame) -> None:
         self.__game = game
     def run(self, td: timedelta):
@@ -37,32 +30,24 @@ class EnterWaitAndExitQuickBattle():
         print("~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ")
 
 class SetCursorToSetting():
-    """いますぐバトル生成済み画面から、「せってい」にカーソルを合わせる。
-    """
     def __init__(self, game: MockGame) -> None:
         self.__game = game
     def run(self):
         self.__game.set_cursor_to_setting()
 
 class ChangeSetting():
-    """「せってい」にカーソルが合った状態から、設定を変更して保存、「せってい」にカーソルを戻す。
-    """
     def __init__(self, game: MockGame) -> None:
         self.__game = game
     def run(self):
         self.__game.change_setting()
 
 class Load():
-    """「せってい」にカーソルが合った状態からロードし、メニューを開き「レポート」にカーソルを合わせる。
-    """
     def __init__(self, game: MockGame) -> None:
         self.__game = game
     def run(self):
         self.__game.load()
 
 class WriteReport():
-    """「レポート」にカーソルが合った状態から、レポートを書き、「レポート」にカーソルを戻す。
-    """
     def __init__(self, game: MockGame) -> None:
         self.__game = game
     def run(self):
@@ -89,6 +74,8 @@ class TestExecute(unittest.TestCase):
         execute_automation(operations, target_seeds, tsv, advances_by_opening_items)
         print(game.result)
         self.assertEqual(target_seeds[0], game.seed)
+
+        print(title_logo)
 
 if __name__ == "__main__":
     unittest.main()
