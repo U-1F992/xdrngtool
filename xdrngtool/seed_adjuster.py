@@ -26,7 +26,7 @@ class SeedAdjuster():
     ) -> None:
         """
         Args:
-            current_seed_searcher (CurrentSeedSearcher): 
+            current_seed_searcher (ICurrentSeedSearcher): 
             generate_next_team_pair (OperationReturnsTeamPair): 現在のいますぐバトル生成結果を破棄し、再度生成する
             enter_wait_and_exit_quick_battle (OperationTakesTimedelta): 「このポケモンで　はじめてもよいですか？」「はい」からいますぐバトルを開始し、降参「はい」まで誘導。timedelta時間待機した後、いますぐバトルを降参し、1回いますぐバトルを生成する
             set_cursor_to_setting (Operation): いますぐバトル生成済み画面から、「せってい」にカーソルを合わせる
@@ -56,16 +56,16 @@ class SeedAdjuster():
         Args:
             target (Tuple[int, timedelta]): 目標seedと待機時間のタプル
         """
-        current_seed = __advance_by_moltres(
+        current_seed = _advance_by_moltres(
             self.__current_seed_searcher, self.__generate_next_team_pair, self.__enter_wait_and_exit_quick_battle, 
             target
         )
-        __advance_according_to_path(
+        _advance_according_to_path(
             self.__current_seed_searcher, self.__generate_next_team_pair, self.__set_cursor_to_setting, self.__change_setting, self.__load, self.__write_report,
             current_seed, target, self.__tsv, self.__advances_by_opening_items
         )
         
-def __advance_by_moltres(
+def _advance_by_moltres(
     current_seed_searcher: ICurrentSeedSearcher,
     generate_next_team_pair: OperationReturnsTeamPair,
     enter_wait_and_exit_quick_battle: OperationTakesTimedelta,
@@ -75,7 +75,7 @@ def __advance_by_moltres(
     """いますぐバトルにファイヤーを出し、高速消費する。
 
     Args:
-        current_seed_searcher (CurrentSeedSearcher): 
+        current_seed_searcher (ICurrentSeedSearcher): 
         generate_next_team_pair (OperationReturnsTeamPair): _description_
         enter_wait_and_exit_quick_battle (OperationTakesTimedelta): _description_
         target (Tuple[int, timedelta]):  目標seedと待機時間のタプル
@@ -108,7 +108,7 @@ def __advance_by_moltres(
 
     return current_seed
 
-def __advance_according_to_path(
+def _advance_according_to_path(
     current_seed_searcher: ICurrentSeedSearcher,
     generate_next_team_pair: OperationReturnsTeamPair,
     set_cursor_to_setting: Operation,
@@ -124,7 +124,7 @@ def __advance_according_to_path(
     """経路を導出し、それに従って消費する。
 
     Args:
-        current_seed_searcher (CurrentSeedSearcher): 
+        current_seed_searcher (ICurrentSeedSearcher): 
         generate_next_team_pair (OperationReturnsTeamPair): 現在のいますぐバトル生成結果を破棄し、再度生成する
         set_cursor_to_setting (Operation): いますぐバトル生成済み画面から、「せってい」にカーソルを合わせる
         change_setting (Operation): 「せってい」にカーソルが合った状態から、設定を変更して保存、「せってい」にカーソルを戻す
@@ -153,14 +153,14 @@ def __advance_according_to_path(
                 _lcg = LCG(seed_before)
                 team_suggested, _ = decode_quick_battle(generate_quick_battle(_lcg, tsv_suggested))
                 if team_generated == team_suggested:
-                    __advance_according_to_path(
+                    _advance_according_to_path(
                         current_seed_searcher, generate_next_team_pair, set_cursor_to_setting, change_setting, load, write_report,
                         _lcg.seed, target, tsv, advances_by_opening_items
                     )
                     return
 
             conflict_current_seed = current_seed_searcher.search()
-            __advance_according_to_path(
+            _advance_according_to_path(
                 current_seed_searcher, generate_next_team_pair, set_cursor_to_setting, change_setting, load, write_report,
                 conflict_current_seed, target, tsv, advances_by_opening_items
             )

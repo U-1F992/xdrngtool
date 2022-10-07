@@ -6,8 +6,8 @@ MINIMUM_WAIT_TIME = timedelta(minutes=1)
 
 # 最長の待機時間
 # 待機が長すぎると初期seed厳選をする意味がないですが、短く設定し過ぎると厳選に時間がかかりすぎます。
-# 経験上3時間ぐらいがいい塩梅です。
-MAXIMUM_WAIT_TIME = timedelta(hours=3)
+# 6時間に設定すると、総試行時間の平均が最も短くなるようです。
+MAXIMUM_WAIT_TIME = timedelta(hours=6)
 
 # 待機時間から天引きする時間
 # 短い方が戦闘後の消費行動を少なくできますが、先述の理由で短くし過ぎると消費しすぎるなどの不具合が発生します。

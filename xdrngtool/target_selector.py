@@ -11,7 +11,7 @@ class TargetSelector():
     def __init__(self, current_seed_searcher: ICurrentSeedSearcher, transition_to_quick_battle: Operation) -> None:
         """
         Args:
-            current_seed_searcher (CurrentSeedSearcher): 
+            current_seed_searcher (ICurrentSeedSearcher): 
             transition_to_quick_battle (Operation): リセットし、1回いますぐバトル（さいきょう）を生成した画面まで誘導する
         """
         self.__current_seed_searcher = current_seed_searcher

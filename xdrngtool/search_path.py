@@ -14,13 +14,13 @@ def search_path(
     tsv: Optional[int] = None,
     advances_by_opening_items: Optional[int] = None
 ) -> Tuple[List[Tuple[TeamPair, int, Set[int]]], int, int]:
-    """消費経路を算出します。
+    """消費経路を算出する。
 
     Args:
         current_seed (int): 現在のseed
         target_seed (int): 目標のseed
-        tsv (int, optional): TSV。正確に指定されない場合、実際のいますぐバトルの生成結果および回数は異なる可能性が生じます。 Defaults to None.
-        advances_by_opening_items (Optional[int], optional): もちものを開く際の消費数。 Defaults to None.
+        tsv (int, optional): TSV。正確に指定されない場合、実際のいますぐバトルの生成結果および回数は異なる可能性が生じる。 Defaults to None.
+        advances_by_opening_items (Optional[int], optional): 「もちもの」の開閉にかかる消費数。レポートを消費手段に加える場合のみ指定する。 Defaults to None.
 
     Returns:
         Tuple[List[Tuple[TeamPair, int, Set[int]]], int, int]: 消費経路\n
@@ -144,7 +144,7 @@ def _search_pair_with_the_smallest_sum(total_advances: int) -> Tuple[int, int]:
     return (40 * t + 7 * total_advances, -63 * t - 11 * total_advances)
 
 def _search_pair_with_the_smallest_sum_under_2520(total_advances: int) -> Tuple[int, int]:
-    """total_advances消費するために必要な設定変更回数とレポート回数の組を全探索で探す。。
+    """total_advances消費するために必要な設定変更回数とレポート回数の組を全探索で探す。
 
     Args:
         total_advances (int): _description_

@@ -3,7 +3,7 @@ import unittest
 from xddb import PlayerTeam, EnemyTeam, XDDBClient, QuickBattleSeedSearcher
 from xdrngtool import CurrentSeedSearcher
 
-from mock_operation import MockOperationReturnsTeamPair
+from mocks import MockOperationReturnsTeamPair
 
 class TestCurrentSeedSearcher(unittest.TestCase):
     def test_current_seed_searcher(self):

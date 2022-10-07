@@ -1,6 +1,11 @@
-from typing import List
+from datetime import timedelta
+import math
+import random
+from typing import List, Optional
 
-from xdrngtool import TeamPair
+from lcg.gc import LCG
+from xddb import generate_quick_battle
+from xdrngtool import TeamPair, decode_quick_battle
 
 class MockOperationReturnsTeamPair():
     """コンストラクタでいますぐバトル生成のリストを受け取り、runが呼ばれる度に先頭から返す。
@@ -25,3 +30,46 @@ class MockCurrentSeedSearcher():
         self.__seeds = seeds
     def search(self) -> int:
         return self.__seeds.pop(0)
+
+class MockGame():
+    """ゲームを模す。
+    """
+    def __init__(self, tsv: Optional[int] = None, advances_by_opening_items: Optional[int] = None) -> None:
+        self.__tsv = tsv
+        self.__advances_by_opening_items = advances_by_opening_items
+        self.__lcg = LCG(0)
+        self.__change_setting = 0
+        self.__write_report = 0
+
+    def generate_quick_battle(self) -> TeamPair:
+        ret, _ = decode_quick_battle(generate_quick_battle(self.__lcg, self.__tsv))
+        return ret
+    
+    def show_moltres(self, td: timedelta):
+        self.__lcg.adv(math.floor(3842 * td.total_seconds()))
+
+    def change_setting(self):
+        self.__lcg.adv(40)
+        self.__change_setting += 1
+    
+    def load(self):
+        if self.__advances_by_opening_items is None:
+            raise Exception("Attempted to load even though advances_by_opening_items is None.")
+        self.__lcg.adv((self.__advances_by_opening_items - 1) * 2)
+
+    def write_report(self):
+        self.__lcg.adv(63)
+        self.__write_report += 1
+
+    def reset(self):
+        self.__lcg = LCG(random.randint(0, 0xffffffff))
+        self.__change_setting = 0
+        self.__write_report = 0
+    
+    @property
+    def seed(self):
+        return self.__lcg.seed
+
+    @property
+    def result(self):
+        return self.__change_setting, self.__write_report

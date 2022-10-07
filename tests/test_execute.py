@@ -1,65 +1,92 @@
 from datetime import timedelta
 from typing import List, Optional
-from xddb import EnemyTeam, PlayerTeam, QuickBattleSeedSearcher, XDDBClient
-from xdrngtool import AutomationExecutor, TargetSelector, CurrentSeedSearcher, TeamPair, SeedAdjuster
+import unittest
+
+from xdrngtool import TeamPair
+
+from mocks import MockGame
+from xdrngtool.execute_automation import execute_automation
+
 
 class TransitionToQuickBattle():
     """リセットし、1回いますぐバトル（さいきょう）を生成した画面まで誘導する。
     """
+    def __init__(self, game: MockGame) -> None:
+        self.__game = game
     def run(self):
-        pass
+        print("Reset")
+        self.__game.reset()
+
 class GenerateNextTeamPair():
     """現在のいますぐバトル生成結果を破棄し、再度生成する。
     """
+    def __init__(self, game: MockGame) -> None:
+        self.__game = game
     def run(self) -> TeamPair:
-        return ((PlayerTeam.Mewtwo, 100, 100), (EnemyTeam.Articuno, 100, 100))
+        ret = self.__game.generate_quick_battle()
+        print(f"Generated: {ret}")
+        return ret
+
 class EnterWaitAndExitQuickBattle():
     """「このポケモンで　はじめてもよいですか？」「はい」からいますぐバトルを開始し、降参「はい」まで誘導。timedelta時間待機した後、いますぐバトルを降参し、1回いますぐバトルを生成する。
     """
+    def __init__(self, game: MockGame) -> None:
+        self.__game = game
     def run(self, td: timedelta):
-        pass
+        self.__game.show_moltres(td)
+        print(f"Sleep: {td}")
+
 class SetCursorToSetting():
     """いますぐバトル生成済み画面から、「せってい」にカーソルを合わせる。
     """
     def run(self):
-        pass
+        print("Set cursor to setting")
+
 class ChangeSetting():
     """「せってい」にカーソルが合った状態から、設定を変更して保存、「せってい」にカーソルを戻す。
     """
+    def __init__(self, game: MockGame) -> None:
+        self.__game = game
     def run(self):
-        pass
+        self.__game.change_setting()
+
 class Load():
     """「せってい」にカーソルが合った状態からロードし、メニューを開き「レポート」にカーソルを合わせる。
     """
+    def __init__(self, game: MockGame) -> None:
+        self.__game = game
     def run(self):
-        pass
+        self.__game.load()
+
 class WriteReport():
     """「レポート」にカーソルが合った状態から、レポートを書き、「レポート」にカーソルを戻す。
     """
+    def __init__(self, game: MockGame) -> None:
+        self.__game = game
     def run(self):
-        pass
+        self.__game.write_report()
 
-operations = (
-    TransitionToQuickBattle(),
-    GenerateNextTeamPair(),
-    EnterWaitAndExitQuickBattle(),
-    SetCursorToSetting(),
-    ChangeSetting(),
-    Load(),
-    WriteReport(),
-)
+class TestExecute(unittest.TestCase):
+    def test_execute(self):
 
-target_seeds: List[int] = [0xbeef]
-tsv: Optional[int] = None
-advances_by_opening_items: Optional[int] = None
+        target_seeds: List[int] = [0xbeefface]
+        tsv: Optional[int] = None
+        advances_by_opening_items: Optional[int] = None
 
-client = XDDBClient()
-searcher = QuickBattleSeedSearcher(client, tsv) if tsv is not None else QuickBattleSeedSearcher(client)
+        game = MockGame(tsv, advances_by_opening_items)
+        operations = (
+            TransitionToQuickBattle(game),
+            GenerateNextTeamPair(game),
+            EnterWaitAndExitQuickBattle(game),
+            SetCursorToSetting(),
+            ChangeSetting(game),
+            Load(game),
+            WriteReport(game),
+        )
 
-current_seed_searcher = CurrentSeedSearcher(searcher, operations[1])
+        execute_automation(operations, target_seeds, tsv, advances_by_opening_items)
+        print(game.result)
+        self.assertEqual(target_seeds[0], game.seed)
 
-target_selector = TargetSelector(current_seed_searcher, operations[0])
-seed_adjuster = SeedAdjuster(current_seed_searcher, *operations[1:], tsv, advances_by_opening_items)
-
-automation_executor = AutomationExecutor(target_selector, seed_adjuster)
-automation_executor.execute(target_seeds)
+if __name__ == "__main__":
+    unittest.main()
