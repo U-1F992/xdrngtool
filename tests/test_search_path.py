@@ -10,7 +10,7 @@ def _advance_according_to_path(current_seed: int, path: Tuple[List[Tuple[TeamPai
     teams, change_setting, write_report = path
     # （teamsの個数）回生成
     for _ in teams:
-        generate_quick_battle(lcg, tsv)
+        generate_quick_battle(lcg, tsv) if tsv is not None else generate_quick_battle(lcg) 
     # 設定変更
     lcg.adv(40 * change_setting)
     if advances_by_opening_items is None:

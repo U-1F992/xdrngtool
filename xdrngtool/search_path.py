@@ -36,7 +36,7 @@ def search_path(
     sequence: List[Tuple[TeamPair, int]] = []
     
     while lcg.index_from(current_seed) <= total_advances:
-        team_pair, _ = decode_quick_battle(generate_quick_battle(lcg, tsv))
+        team_pair, _ = decode_quick_battle(generate_quick_battle(lcg, tsv) if tsv is not None else generate_quick_battle(lcg))
         leftover = total_advances - lcg.index_from(current_seed)
         sequence.append((team_pair, leftover))
     sequence.pop()
@@ -85,8 +85,11 @@ def search_path(
             leftover = total_advances - advances_by_loading
         else:
             # 残り消費数が63*40+by_loading以上になるまで生成を切り上げる
-            while sequence[-1][1] < ADVANCES_BY_WRITING_REPORT * ADVANCES_BY_CHANGING_SETTING + advances_by_loading:
-                sequence.pop()
+            try:
+                while sequence[-1][1] < ADVANCES_BY_WRITING_REPORT * ADVANCES_BY_CHANGING_SETTING + advances_by_loading:
+                        sequence.pop()
+            except IndexError:
+                pass
             if len(sequence) == 0:
                 leftover = total_advances - advances_by_loading
             else:
@@ -104,7 +107,7 @@ def search_path(
     _lcg = LCG(current_seed)
     for _ in _teams:
         seed_before = _lcg.seed
-        team, psvs = decode_quick_battle(generate_quick_battle(_lcg, tsv))
+        team, psvs = decode_quick_battle(generate_quick_battle(_lcg, tsv) if tsv is not None else generate_quick_battle(_lcg))
         teams.append((team, seed_before, psvs))
 
     path = (teams, change_setting, write_report)

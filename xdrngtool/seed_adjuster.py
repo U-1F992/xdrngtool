@@ -1,12 +1,11 @@
 from datetime import timedelta
 from typing import Optional, Tuple
 
-from lcg.gc import LCG
-from xddb import EnemyTeam, generate_quick_battle
+from xddb import EnemyTeam, QuickBattleAdvanceEscort, NotFound
 
 from .protocol import ICurrentSeedSearcher, Operation, OperationReturnsTeamPair, OperationTakesTimedelta
 from .search_path import search_path
-from .util import decode_quick_battle, get_wait_time
+from .util import get_wait_time
 
 class SeedAdjuster():
     """目標のseedまで消費を実行する。
@@ -60,8 +59,9 @@ class SeedAdjuster():
             self.__current_seed_searcher, self.__generate_next_team_pair, self.__enter_wait_and_exit_quick_battle, 
             target
         )
+        escort = QuickBattleAdvanceEscort(current_seed, self.__tsv) if self.__tsv is not None else QuickBattleAdvanceEscort(current_seed)
         _advance_according_to_path(
-            self.__current_seed_searcher, self.__generate_next_team_pair, self.__set_cursor_to_setting, self.__change_setting, self.__load, self.__write_report,
+            escort, self.__current_seed_searcher, self.__generate_next_team_pair, self.__set_cursor_to_setting, self.__change_setting, self.__load, self.__write_report,
             current_seed, target, self.__tsv, self.__advances_by_opening_items
         )
         
@@ -109,6 +109,7 @@ def _advance_by_moltres(
     return current_seed
 
 def _advance_according_to_path(
+    escort: QuickBattleAdvanceEscort, 
     current_seed_searcher: ICurrentSeedSearcher,
     generate_next_team_pair: OperationReturnsTeamPair,
     set_cursor_to_setting: Operation,
@@ -124,7 +125,7 @@ def _advance_according_to_path(
     """経路を導出し、それに従って消費する。
 
     Args:
-        current_seed_searcher (ICurrentSeedSearcher): 
+        escort (QuickBattleAdvanceEscort): 
         generate_next_team_pair (OperationReturnsTeamPair): 現在のいますぐバトル生成結果を破棄し、再度生成する
         set_cursor_to_setting (Operation): いますぐバトル生成済み画面から、「せってい」にカーソルを合わせる
         change_setting (Operation): 「せってい」にカーソルが合った状態から、設定を変更して保存、「せってい」にカーソルを戻す
@@ -138,31 +139,24 @@ def _advance_according_to_path(
     """
     teams, change_setting_count, write_report_count = search_path(current_seed, target[0], tsv, advances_by_opening_items)
 
-    for team_seed_psvs in teams:
+    for _ in teams:
         
-        team_expected, seed_before, psvs = team_seed_psvs
+        team_expected = escort.expected_next()[:2]
         team_generated = generate_next_team_pair.run()
 
-        # 生成結果と予測が異なる場合、色回避によって生成ルートが変更される（TSVを指定しなかった、指定したTSVが誤っていたなど）
-        # - psvをtsvに設定して一致するものがあれば、そこから復帰
-        # - psvのいずれをtsvに設定しても一致するものがなければ、現在seedを再特定して復帰
-        
-        if team_generated != team_expected:
-
-            for tsv_suggested in psvs:
-                _lcg = LCG(seed_before)
-                team_suggested, _ = decode_quick_battle(generate_quick_battle(_lcg, tsv_suggested))
-                if team_generated == team_suggested:
-                    _advance_according_to_path(
-                        current_seed_searcher, generate_next_team_pair, set_cursor_to_setting, change_setting, load, write_report,
-                        _lcg.seed, target, tsv, advances_by_opening_items
-                    )
-                    return
-
-            conflict_current_seed = current_seed_searcher.search()
+        ret = escort.next(*team_generated)
+        if isinstance(ret, NotFound):
+            conflict = current_seed_searcher.search()
             _advance_according_to_path(
-                current_seed_searcher, generate_next_team_pair, set_cursor_to_setting, change_setting, load, write_report,
-                conflict_current_seed, target, tsv, advances_by_opening_items
+                QuickBattleAdvanceEscort(conflict, tsv) if tsv is not None else QuickBattleAdvanceEscort(conflict), current_seed_searcher, generate_next_team_pair, set_cursor_to_setting, change_setting, load, write_report,
+                conflict, target, tsv, advances_by_opening_items
+            )
+            return
+
+        if team_expected != team_generated:
+            _advance_according_to_path(
+                escort, current_seed_searcher, generate_next_team_pair, set_cursor_to_setting, change_setting, load, write_report,
+                ret.current_seed, target, tsv, advances_by_opening_items
             )
             return
     
