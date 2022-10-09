@@ -59,9 +59,8 @@ class SeedAdjuster():
             self.__current_seed_searcher, self.__generate_next_team_pair, self.__enter_wait_and_exit_quick_battle, 
             target
         )
-        escort = QuickBattleAdvanceEscort(current_seed, self.__tsv) if self.__tsv is not None else QuickBattleAdvanceEscort(current_seed)
         _advance_according_to_path(
-            escort, self.__current_seed_searcher, self.__generate_next_team_pair, self.__set_cursor_to_setting, self.__change_setting, self.__load, self.__write_report,
+            self.__current_seed_searcher, self.__generate_next_team_pair, self.__set_cursor_to_setting, self.__change_setting, self.__load, self.__write_report,
             current_seed, target, self.__tsv, self.__advances_by_opening_items
         )
         
@@ -109,7 +108,6 @@ def _advance_by_moltres(
     return current_seed
 
 def _advance_according_to_path(
-    escort: QuickBattleAdvanceEscort, 
     current_seed_searcher: ICurrentSeedSearcher,
     generate_next_team_pair: OperationReturnsTeamPair,
     set_cursor_to_setting: Operation,
@@ -125,7 +123,7 @@ def _advance_according_to_path(
     """経路を導出し、それに従って消費する。
 
     Args:
-        escort (QuickBattleAdvanceEscort): 
+        current_seed_searcher (ICurrentSeedSearcher): 
         generate_next_team_pair (OperationReturnsTeamPair): 現在のいますぐバトル生成結果を破棄し、再度生成する
         set_cursor_to_setting (Operation): いますぐバトル生成済み画面から、「せってい」にカーソルを合わせる
         change_setting (Operation): 「せってい」にカーソルが合った状態から、設定を変更して保存、「せってい」にカーソルを戻す
@@ -137,6 +135,8 @@ def _advance_according_to_path(
         tsv (Optional[int]): TSV
         advances_by_opening_items (Optional[int]): もちものを開く際の消費数
     """
+    
+    escort = QuickBattleAdvanceEscort(current_seed, tsv) if tsv is not None else QuickBattleAdvanceEscort(current_seed)
     teams, change_setting_count, write_report_count = search_path(current_seed, target[0], tsv, advances_by_opening_items)
 
     for _ in teams:
@@ -148,14 +148,14 @@ def _advance_according_to_path(
         if isinstance(ret, NotFound):
             conflict = current_seed_searcher.search()
             _advance_according_to_path(
-                QuickBattleAdvanceEscort(conflict, tsv) if tsv is not None else QuickBattleAdvanceEscort(conflict), current_seed_searcher, generate_next_team_pair, set_cursor_to_setting, change_setting, load, write_report,
+                current_seed_searcher, generate_next_team_pair, set_cursor_to_setting, change_setting, load, write_report,
                 conflict, target, tsv, advances_by_opening_items
             )
             return
 
         if team_expected != team_generated:
             _advance_according_to_path(
-                escort, current_seed_searcher, generate_next_team_pair, set_cursor_to_setting, change_setting, load, write_report,
+                current_seed_searcher, generate_next_team_pair, set_cursor_to_setting, change_setting, load, write_report,
                 ret.current_seed, target, tsv, advances_by_opening_items
             )
             return
