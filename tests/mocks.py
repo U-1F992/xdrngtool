@@ -1,4 +1,3 @@
-from cgitb import reset
 from datetime import timedelta
 import math
 import random
@@ -50,7 +49,7 @@ class MockGame():
         self.__write_report = 0
 
     def generate_quick_battle(self) -> TeamPair:
-        ret, _ = decode_quick_battle(generate_quick_battle(self.__lcg, self.__tsv))
+        ret, _ = decode_quick_battle(generate_quick_battle(self.__lcg, self.__tsv) if self.__tsv is not None else generate_quick_battle(self.__lcg))
         if self.__show_moltres != timedelta():
             self.__generate_quick_battle += 1
         return ret

@@ -17,7 +17,4 @@ class AutomationExecutor():
             target_seeds (List[int]): 目標seedのリスト
         """
         current_seed, target = self.__target_selector.execute(target_seeds)
-        try:
-            self.__seed_adjuster.execute(target)
-        except:
-            self.execute(target_seeds)
+        self.__seed_adjuster.execute(target)
