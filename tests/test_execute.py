@@ -62,7 +62,7 @@ class TestExecute(unittest.TestCase):
             # TSV未指定で色回避あり、ロードなし
             ([0xbeefface], None, 3257, None),
             # TSVを適切に指定、ロードなし
-            ([0xbeefface], 3257, 3257, None),
+            ([0xbeefface], 0, 0, None),
             # 誤ったTSVを指定、色回避あり、ロードなし
             ([0xbeefface], 0, 3257, None),
 
@@ -71,7 +71,7 @@ class TestExecute(unittest.TestCase):
             # TSV未指定で色回避あり、ロードあり
             ([0xbeefface], None, 3257, 17),
             # TSVを適切に指定、ロードあり
-            ([0xbeefface], 3257, 3257, 17),
+            ([0xbeefface], 0, 0, 17),
             # 誤ったTSVを指定、色回避あり、ロードあり
             ([0xbeefface], 0, 3257, 17),
         ]
